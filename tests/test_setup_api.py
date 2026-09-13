@@ -78,6 +78,8 @@ def test_certificate_returns_only_public_material(setup_api):
     assert "BEGIN CERTIFICATE" in result["public_certificate"]
     assert "PRIVATE" not in str(result)
     assert writes[0][-1] == "private_key"
+    document_updates = [args[2] for args in writes if isinstance(args[2], dict)]
+    assert any(update.get("private_key") == "********" for update in document_updates)
 
 
 def test_certificate_does_not_replace_manual_key(setup_api, monkeypatch):
@@ -101,4 +103,31 @@ def test_activate_requires_mapping_and_consent(setup_api):
     mod, _, writes = setup_api
     with pytest.raises(FeedError, match="finish_authorization"):
         mod.activate("test")
+    assert not writes
+
+
+def test_explicit_recovery_replaces_only_orphaned_certificate(setup_api):
+    mod, doc, writes = setup_api
+    doc.public_certificate = "old-public-certificate"
+    mod.generate_certificate("test", recover_missing_key=1)
+    update = next(args[2] for args in writes if isinstance(args[2], dict))
+    assert update["client_id"] == "pending-setup"
+    assert update["private_key"] == "********"
+
+
+@pytest.mark.parametrize("field", ["enabled", "authorized"])
+def test_recovery_refuses_active_connection(setup_api, field):
+    mod, doc, writes = setup_api
+    setattr(doc, field, 1)
+    with pytest.raises(FeedError):
+        mod.generate_certificate("test", recover_missing_key=1)
+    assert not writes
+
+
+def test_recovery_refuses_existing_secrets(setup_api, monkeypatch):
+    mod, doc, writes = setup_api
+    doc.public_certificate = "old-public-certificate"
+    monkeypatch.setattr(mod, "secret", lambda *a: "existing-secret")
+    with pytest.raises(FeedError):
+        mod.generate_certificate("test", recover_missing_key=1)
     assert not writes

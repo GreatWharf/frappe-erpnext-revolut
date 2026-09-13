@@ -90,6 +90,34 @@ class TestBankFeedIntegration(IntegrationTestCase):
             ],
         }
 
+    def test_credentials_survive_client_id_and_document_saves(self):
+        from unittest.mock import patch
+
+        from revolut_bank_feed.auth import save_tokens, secret
+        from revolut_bank_feed.setup import generate_certificate, save_client_id
+
+        # Keep fixture writes in the test transaction; no remote authorization occurs.
+        with patch.object(frappe.db, "commit"):
+            generate_certificate(self.connection.name)
+            private_key = secret(self.connection.name, "private_key")
+            self.assertTrue(private_key)
+            save_client_id(self.connection.name, "synthetic-client-updated")
+            self.assertEqual(secret(self.connection.name, "private_key"), private_key)
+            self.connection.reload()
+            save_tokens(
+                self.connection,
+                {
+                    "access_token": "synthetic-access",
+                    "refresh_token": "synthetic-refresh",
+                    "expires_in": 2400,
+                },
+            )
+            self.connection.reload()
+            self.connection.save()
+            self.assertEqual(secret(self.connection.name, "private_key"), private_key)
+            self.assertEqual(secret(self.connection.name, "access_token"), "synthetic-access")
+            self.assertEqual(secret(self.connection.name, "refresh_token"), "synthetic-refresh")
+
     def test_submitted_bank_row_is_idempotent_and_has_no_gl_entries(self):
         gl_count = frappe.db.count("GL Entry")
         self.assertEqual(ingest(self.connection, self.tx)["created"], 1)

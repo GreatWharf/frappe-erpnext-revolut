@@ -114,11 +114,15 @@ def create_connection(company, environment="Sandbox", historical_from=None):
 
 @frappe.whitelist(methods=["POST"])
 @safe_action
-def generate_certificate(connection):
+def generate_certificate(connection, recover_missing_key=False):
     connection_for_user(connection)
     with connection_lock(connection):
         doc = frappe.get_doc("Revolut Connection", connection)
-        if doc.enabled or doc.authorized or doc.public_certificate or secret(doc.name, "private_key"):
+        recover = bool(cint(recover_missing_key))
+        has_credentials = any(
+            secret(doc.name, field) for field in ("private_key", "access_token", "refresh_token")
+        )
+        if doc.enabled or doc.authorized or has_credentials or (doc.public_certificate and not recover):
             raise FeedError("certificate_already_configured_use_advanced_settings_to_rotate")
         private_pem, certificate_pem = make_certificate(doc.issuer)
         cert = x509.load_pem_x509_certificate(certificate_pem)
@@ -128,6 +132,9 @@ def generate_certificate(connection):
             doc.doctype,
             doc.name,
             {
+                # Frappe deletes encrypted secrets on save when their Password field is blank.
+                "private_key": "********",
+                "client_id": "pending-setup",
                 "public_certificate": certificate_pem.decode(),
                 "certificate_expires_on": cert.not_valid_after_utc.date(),
             },

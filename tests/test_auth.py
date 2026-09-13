@@ -91,3 +91,18 @@ def test_authorization_url_requests_read_only(auth_module):
     assert url.hostname == "sandbox-business.revolut.com"
     assert parse_qs(url.query)["scope"] == ["READ"]
     assert parse_qs(url.query)["redirect_uri"] == [connection.redirect_uri]
+
+
+def test_token_credentials_survive_frappes_blank_password_cleanup(auth_module):
+    module, connection, state, secrets, commits, calls = auth_module
+    module.save_tokens(
+        connection, {"access_token": "access-2", "refresh_token": "refresh-2", "expires_in": 2399}
+    )
+    # Frappe v16 _save_passwords removes encrypted values when document fields are blank.
+    for field in ("access_token", "refresh_token"):
+        if not state.get(field):
+            secrets.pop(field, None)
+    assert secrets.get("access_token") == "access-2"
+    assert secrets.get("refresh_token") == "refresh-2"
+    assert set(state["access_token"]) == {"*"}
+    assert set(state["refresh_token"]) == {"*"}

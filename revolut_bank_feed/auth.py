@@ -54,10 +54,14 @@ def save_tokens(doc, result):
         set_encrypted_password(DOCTYPE, doc.name, result["refresh_token"], "refresh_token")
     if not secret(doc.name, "refresh_token"):
         raise FeedError("missing_refresh_token")
+    # Preserve secrets through later Document.save() calls, including this instance.
+    doc.access_token = doc.refresh_token = "********"
     frappe.db.set_value(
         DOCTYPE,
         doc.name,
         {
+            "access_token": "********",
+            "refresh_token": "********",
             "token_expires_at": time.time() + int(result["expires_in"]),
             "authorized": 1,
         },

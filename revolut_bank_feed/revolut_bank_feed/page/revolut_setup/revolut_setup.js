@@ -19,14 +19,15 @@ class RevolutSetup {
     });
     if (!document.getElementById('revolut-setup-styles')) {
       $('<style id="revolut-setup-styles">').text(`
-        .revolut-setup {max-width:1000px;margin:0 auto;padding:24px 16px 56px;}
+        .revolut-setup {max-width:920px;margin:0 auto;padding:24px 16px 56px;}
         .revolut-setup .rb-top {display:flex;gap:16px;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;}
         .revolut-setup .rb-top h2 {font-size:22px;font-weight:650;letter-spacing:-.02em;margin:0 0 6px;}
         .revolut-setup .rb-muted {color:var(--text-muted);line-height:1.6;}
         .revolut-setup .rb-steps {display:flex;padding:0;list-style:none;border-bottom:1px solid var(--border-color);margin:0 0 24px;}
         .revolut-setup .rb-steps li {flex:1;padding:12px 4px;color:var(--text-muted);border-bottom:3px solid transparent;font-size:13px;}
+        .revolut-setup .rb-steps li.rb-done {color:var(--text-color);}
         .revolut-setup .rb-steps li[aria-current=step] {color:var(--primary);border-color:var(--primary);font-weight:600;}
-        .revolut-setup .rb-card {background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:28px;}
+        .revolut-setup .rb-card {background:var(--card-bg);border:1px solid var(--border-color);border-radius:16px;padding:32px;}
         .revolut-setup .rb-card h3 {font-size:19px;margin:0 0 10px;}
         .revolut-setup .rb-fields {max-width:520px;margin-top:22px;}
         .revolut-setup .rb-actions {display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;}
@@ -40,6 +41,23 @@ class RevolutSetup {
         .revolut-setup .rb-status {display:flex;gap:32px;flex-wrap:wrap;padding:16px 0;}
         .revolut-setup .rb-status strong {display:block;font-size:16px;margin-top:4px;}
         .revolut-setup button:focus-visible,.revolut-setup a:focus-visible {outline:2px solid var(--primary);outline-offset:3px;}
+        .revolut-setup .rb-brand {display:flex;align-items:center;gap:16px;margin-bottom:28px;}
+        .revolut-setup .rb-brand img {height:26px;max-width:150px;object-fit:contain;}
+        .revolut-setup .rb-brand .rb-revolut {height:22px;}
+        .revolut-setup .rb-brand .rb-revolut-dark {display:none;}
+        [data-theme="dark"] .revolut-setup .rb-revolut {display:none;}
+        [data-theme="dark"] .revolut-setup .rb-revolut-dark {display:block;height:22px;}
+        .revolut-setup .rb-task {padding:24px 0;border-top:1px solid var(--border-color);}
+        .revolut-setup .rb-task:first-of-type {margin-top:24px;}
+        .revolut-setup .rb-task h4 {font-size:15px;font-weight:600;margin:0 0 10px;}
+        .revolut-setup .rb-task .rb-actions {margin-top:14px;}
+        .revolut-setup .rb-task .rb-fields {margin-top:14px;}
+        .revolut-setup .rb-copy {display:flex;gap:8px;align-items:center;margin-top:12px;}
+        .revolut-setup .rb-copy input {min-width:0;}
+        .revolut-setup details {margin-top:14px;}
+        .revolut-setup summary {cursor:pointer;color:var(--text-muted);padding:6px 0;}
+        .revolut-setup .rb-pill {display:inline-block;border:1px solid var(--border-color);border-radius:20px;padding:4px 10px;font-size:12px;margin-bottom:16px;}
+        .revolut-setup .rb-list {padding-left:20px;margin:16px 0;line-height:1.9;color:var(--text-muted);}
         @media(max-width:640px) {.revolut-setup .rb-card{padding:18px}.revolut-setup .rb-steps li{font-size:11px}.revolut-setup .rb-table th,.revolut-setup .rb-table td{padding:10px 4px}.revolut-setup .rb-status{gap:16px}}
       `).appendTo(document.head);
     }
@@ -56,12 +74,12 @@ class RevolutSetup {
     const button = $('<button type="button">').addClass(`btn ${primary ? 'btn-primary' : 'btn-default'}`).text(__(label)).appendTo(parent);
     button.on('click', async () => {
       if (this.busy) return;
-      this.busy = true; button.prop('disabled', true); this.page.main.find('.rb-error').remove();
+      this.busy = true; button.prop('disabled', true).attr('aria-busy', 'true').text(__('Working…')); this.page.main.find('.rb-error').remove();
       try { await fn(); }
       catch (error) {
         // Frappe displays server validation messages. Keep this inline guidance free of tokens/payloads.
         $('<div class="rb-error" role="alert">').text(__('This step did not finish. Check the message above, correct the details and try again. Your saved progress is safe.')).prependTo(this.page.main.find('.rb-card'));
-      } finally { this.busy = false; button.prop('disabled', false); }
+      } finally { this.busy = false; button.prop('disabled', false).removeAttr('aria-busy').text(__(label)); }
     });
     return button;
   }
@@ -74,22 +92,25 @@ class RevolutSetup {
       return this.load();
     }
     this.page.main.empty();
+    $('<div class="rb-brand">').html('<img src="/assets/revolut_bank_feed/images/erpnext.svg" alt="ERPNext"><span aria-hidden="true">↔</span><img class="rb-revolut" src="/assets/revolut_bank_feed/images/revolut-business.png" alt="Revolut Business"><img class="rb-revolut-dark" src="/assets/revolut_bank_feed/images/revolut-business-white.png" alt="Revolut Business">').appendTo(this.page.main);
     const top = $('<div class="rb-top">').appendTo(this.page.main);
-    $('<div>').html(`<h2>${__('Your Revolut bank feed')}</h2><div class="rb-muted">${__('Connect accounts once. Review transactions in ERPNext.')}</div>`).appendTo(top);
+    $('<div>').html(`<h2>${__('Connect your bank')}</h2><div class="rb-muted">${__('Revolut transactions, ready in ERPNext.')}</div>`).appendTo(top);
     const selector = $('<select class="form-control" aria-label="Revolut connection">').css('max-width','300px').appendTo(top);
     $('<option>').val('').text(__('New connection')).appendTo(selector);
-    data.connections.forEach(c => $('<option>').val(c.name).text(`${c.connection_name} · ${c.company}`).appendTo(selector));
+    data.connections.forEach(c => $('<option>').val(c.name).text(c.connection_name).appendTo(selector));
     selector.val(this.connection || '').on('change', () => { this.connection = selector.val() || null; this.load(); });
     const doc = data.connection;
     const step = !doc ? 0 : !doc.has_private_key && !doc.authorized ? 1 : !doc.authorized ? 2 : doc.enabled ? 4 : 3;
     if (step < 4) {
       const steps = $('<ol class="rb-steps" aria-label="Setup progress">').appendTo(this.page.main);
       ['Company', 'Certificate', 'Connect', 'Accounts'].forEach((title, i) => {
-        const li = $('<li>').text(`${i + 1}. ${__(title)}`).appendTo(steps);
+        const li = $('<li>').text(`${i < step ? '✓' : i + 1}  ${__(title)}`).appendTo(steps);
+        if (i < step) li.addClass('rb-done');
         if (i === step) li.attr('aria-current', 'step');
       });
     }
     this.card = $('<section class="rb-card">').appendTo(this.page.main);
+    if (doc) $('<div class="rb-pill">').text(doc.environment).appendTo(this.card);
     if (step === 0) this.company();
     else if (step === 1) this.certificate(doc);
     else if (step === 2) this.connect(doc);
@@ -101,14 +122,14 @@ class RevolutSetup {
     $('<p class="rb-muted">').text(__(text)).appendTo(this.card);
   }
   company() {
-    this.intro('Start with your company', 'Choose the company that owns this Revolut Business account. You can add another connection for another company later.');
+    this.intro('Start with your company', 'Choose a company and the first date to import.');
     const fields = $('<div class="rb-fields">').appendTo(this.card);
     const company = this.control(fields, 'company', 'Select', 'Company', {options: [''].concat(this.data.companies), reqd: 1});
     const environment = this.control(fields, 'environment', 'Select', 'Revolut account', {options: ['Sandbox', 'Production']});
     environment.set_value('Sandbox');
     const date = this.control(fields, 'historical_from', 'Date', 'Import transactions from', {reqd: 1});
     date.set_value(frappe.datetime.add_days(frappe.datetime.get_today(), -30));
-    $('<div class="rb-note">').text(__('Sandbox is for testing. Choose Production for your real Business account. Start with a short period so you can compare it with a statement.')).appendTo(this.card);
+    $('<div class="rb-note">').text(__('Production connects your real account. Sandbox is for testing.')).appendTo(this.card);
     this.action($('<div class="rb-actions">').appendTo(this.card), 'Continue', async () => {
       if (!company.get_value() || !date.get_value()) return frappe.msgprint(__('Choose a company and start date.'));
       const doc = await this.call('create_connection', {company: company.get_value(), environment: environment.get_value(), historical_from: date.get_value()});
@@ -116,39 +137,55 @@ class RevolutSetup {
     }, true);
   }
   certificate(doc) {
-    this.intro('Create your connection certificate', 'ERPNext will generate the certificate Revolut needs. Your private key stays encrypted on this server; you only copy the public certificate.');
-    $('<div class="rb-note">').text(__('No terminal commands or key files to manage. Keep your normal ERPNext backups, including the site encryption key.')).appendTo(this.card);
-    this.action($('<div class="rb-actions">').appendTo(this.card), 'Generate certificate', async () => {
-      await this.call('generate_certificate', {connection: doc.name}); await this.load();
+    const recovery = Boolean(doc.public_certificate && !doc.has_private_key);
+    this.intro(recovery ? 'Repair your connection certificate' : 'Create a secure connection',
+      recovery ? 'Your certificate is saved, but its private key is missing. Create a replacement to continue.' : 'Generate the public certificate you’ll add to Revolut.');
+    const list = $('<ul class="rb-list">').appendTo(this.card);
+    (recovery ? ['Your company and import date stay saved.', 'Add the replacement certificate in Revolut and copy its new Client ID.'] :
+      ['Your private key stays encrypted in ERPNext.', 'Only the public certificate is shared with Revolut.']).forEach(text => $('<li>').text(__(text)).appendTo(list));
+    this.action($('<div class="rb-actions">').appendTo(this.card), recovery ? 'Create replacement certificate' : 'Create certificate', async () => {
+      await this.call('generate_certificate', {connection: doc.name, recover_missing_key: recovery ? 1 : 0}); await this.load();
     }, true);
   }
   connect(doc) {
-    this.intro('Allow Revolut to share transactions', 'Register the certificate in Revolut, then approve read-only access. You will return here to finish the connection.');
+    const registered = Boolean(doc.client_id && doc.client_id !== 'pending-setup');
+    this.intro(registered ? 'Approve access in Revolut' : 'Add your certificate to Revolut',
+      registered ? 'Allow read-only access, then return here to finish.' : 'Open Revolut Business → Settings → APIs → Business API.');
     const host = doc.environment === 'Production' ? 'business.revolut.com' : 'sandbox-business.revolut.com';
-    $('<p>').html(`<strong>${__('1. Register the certificate')}</strong><br>${__('In Revolut, open Settings → APIs → Business API → Add API certificate.')}`).appendTo(this.card);
-    const link = $('<a target="_blank" rel="noopener noreferrer">').attr('href', `https://${host}`).text(__('Open Revolut Business')).appendTo(this.card);
-    link.addClass('btn btn-default');
+    const registration = registered ? $('<details>').appendTo(this.card) : $('<div>').appendTo(this.card);
+    if (registered) $('<summary>').text(__('Certificate registered · View or change details')).appendTo(registration);
+    const task = (parent, title) => {
+      const section = $('<section class="rb-task">').appendTo(parent);
+      $('<h4>').text(__(title)).appendTo(section);
+      return section;
+    };
+    const certificate = task(registration, '1. Add an API certificate');
+    const actions = $('<div class="rb-actions">').appendTo(certificate);
+    $('<a class="btn btn-default" target="_blank" rel="noopener noreferrer">').attr('href', `https://${host}`).text(__('Open Revolut Business ↗')).appendTo(actions);
     if (doc.public_certificate) {
-      $('<pre>').text(doc.public_certificate).appendTo(this.card);
-      this.action($('<div class="rb-actions">').appendTo(this.card), 'Copy public certificate', async () => {
-        await navigator.clipboard.writeText(doc.public_certificate); frappe.show_alert(__('Public certificate copied.'));
-      });
+      this.action(actions, 'Copy certificate', async () => {
+        await navigator.clipboard.writeText(doc.public_certificate); frappe.show_alert(__('Certificate copied.'));
+      }, !registered);
+      const details = $('<details>').appendTo(certificate);
+      $('<summary>').text(__('View public certificate')).appendTo(details);
+      $('<pre>').text(doc.public_certificate).appendTo(details);
     }
-    $('<p class="rb-muted">').css('margin-top','18px').text(__('Use this exact redirect address when Revolut asks for it:')).appendTo(this.card);
-    const redirect = $('<input class="form-control" readonly aria-label="Redirect address">').val(doc.redirect_uri).appendTo(this.card);
+    const redirectTask = task(registration, '2. Set the redirect address');
+    const copy = $('<div class="rb-copy">').appendTo(redirectTask);
+    const redirect = $('<input class="form-control" readonly aria-label="Redirect address">').val(doc.redirect_uri).appendTo(copy);
     redirect.on('focus', () => redirect[0].select());
-    this.action($('<div class="rb-actions">').appendTo(this.card), 'Copy redirect address', () => navigator.clipboard.writeText(doc.redirect_uri));
-    const fields = $('<div class="rb-fields">').appendTo(this.card);
-    const client = this.control(fields, 'client_id', 'Data', 'Client ID shown by Revolut', {reqd: 1});
-    client.set_value(doc.client_id === 'pending-setup' ? '' : doc.client_id);
-    this.action($('<div class="rb-actions">').appendTo(this.card), 'Save Client ID', async () => {
+    this.action(copy, 'Copy', async () => { await navigator.clipboard.writeText(doc.redirect_uri); frappe.show_alert(__('Redirect address copied.')); });
+    const clientTask = task(registration, '3. Paste your Client ID');
+    const client = this.control($('<div class="rb-fields">').appendTo(clientTask), 'client_id', 'Data', 'Client ID from Revolut', {reqd: 1});
+    client.set_value(registered ? doc.client_id : '');
+    this.action($('<div class="rb-actions">').appendTo(clientTask), registered ? 'Update Client ID' : 'Save and continue', async () => {
+      if (!client.get_value()?.trim()) return frappe.msgprint(__('Paste the Client ID shown by Revolut.'));
       await this.call('save_client_id', {connection: doc.name, client_id: client.get_value()}); await this.load();
-    });
-    if (doc.client_id === 'pending-setup') return;
-    $('<hr>').appendTo(this.card);
-    $('<p>').html(`<strong>${__('2. Approve read-only access')}</strong><br>${__('Open the consent page below and authorize access. No payment permission is requested.')}`).appendTo(this.card);
-    this.action($('<div class="rb-actions">').appendTo(this.card), 'Open Revolut authorization', async () => {
-      // Open synchronously to avoid popup blockers after the awaited server call.
+    }, true);
+    if (!registered) return;
+    const consent = task(this.card, '1. Approve read-only access');
+    $('<p class="rb-muted">').text(__('Revolut will ask you to approve access to account and transaction data.')).appendTo(consent);
+    this.action($('<div class="rb-actions">').appendTo(consent), 'Authorize in Revolut ↗', async () => {
       const popup = window.open('about:blank', '_blank');
       if (popup) popup.opener = null;
       try {
@@ -157,10 +194,12 @@ class RevolutSetup {
         else frappe.msgprint(`<a href="${this.esc(url)}" target="_blank" rel="noopener noreferrer">${__('Open authorization')}</a>`);
       } catch (error) { if (popup) popup.close(); throw error; }
     }, true);
-    $('<p class="rb-muted">').css('margin-top','20px').text(__('After approval, copy the full address of the page Revolut opens and paste it below. The code lasts two minutes.')).appendTo(this.card);
-    const pasted = this.control($('<div class="rb-fields">').appendTo(this.card), 'pasted', 'Password', 'Redirected address or authorization code', {reqd: 1});
-    this.action($('<div class="rb-actions">').appendTo(this.card), 'Connect account', async () => {
+    const finish = task(this.card, '2. Finish connecting');
+    $('<p class="rb-muted">').text(__('After approval, paste the full address Revolut opens. It expires after two minutes.')).appendTo(finish);
+    const pasted = this.control($('<div class="rb-fields">').appendTo(finish), 'pasted', 'Password', 'Redirected address or authorization code', {reqd: 1});
+    this.action($('<div class="rb-actions">').appendTo(finish), 'Connect and choose accounts', async () => {
       const value = pasted.get_value();
+      if (!value?.trim()) return frappe.msgprint(__('Paste the address from Revolut first.'));
       try { await this.call('connect_from_paste', {connection: doc.name, pasted_value: value}); }
       finally { pasted.set_value(''); }
       await this.load();
@@ -187,7 +226,7 @@ class RevolutSetup {
       selections.push({account, control});
     });
     if (!options.accounts.length) $('<p>').text(__('Revolut returned no accounts. Check the Business account and environment.')).appendTo(this.card);
-    $('<div class="rb-note">').text(__('Choose all accounts for a complete feed. Fees initially go to review until you confirm their statement treatment. Existing mapping currencies and dates stay fixed. Use Advanced settings to exclude accounts or adjust fee rules.')).appendTo(this.card);
+    $('<div class="rb-note">').text(__('Match every account to start. Use Advanced settings to exclude accounts or adjust fee rules.')).appendTo(this.card);
     const actions = $('<div class="rb-actions">').appendTo(this.card);
     this.action(actions, 'Create an ERPNext Bank Account', () => this.newBank(doc));
     this.action(actions, 'Save accounts and start sync', async () => {
