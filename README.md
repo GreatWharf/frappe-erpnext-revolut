@@ -1,8 +1,73 @@
-# Revolut Bank Feed for ERPNext
+<div align="center">
 
-A direct, read-only Revolut Business bank-feed app for **Frappe/ERPNext v16**. Imports submitted **Bank Transaction** documents for standard Bank Reconciliation. It never creates Payment Entries, Journal Entries, transfers, counterparties or GL Entries.
+<img src="revolut_bank_feed/public/images/bank-feed.svg" width="72" height="72" alt="Bank feed icon" />
 
-**Release: 0.4.0 — production-oriented release candidate.** Unit/mock tests and packaging are validated locally. A real Frappe bench, Docker engine and Revolut account were not available during authoring. Run the supplied bench tests and [deployment acceptance checks](docs/acceptance.md) on staging before connecting live accounting. This is an independent integration, not an official Revolut or Frappe product.
+# Revolut Bank Feed
+
+### Your Revolut transactions. Inside ERPNext.
+
+An **unofficial, read-only** Revolut Business integration for Frappe & ERPNext v16.
+
+[![ERPNext v16](https://img.shields.io/badge/ERPNext-v16-0089FF?style=flat-square)](https://github.com/frappe/erpnext)
+[![Python 3.14](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-16A085?style=flat-square)](LICENSE)
+[![Release candidate](https://img.shields.io/badge/Status-release%20candidate-D99B22?style=flat-square)](docs/verification.md)
+
+[Connect an account](docs/browser-setup.md) · [Deploy with Docker](docker/INTEGRATE-EXISTING-DEPLOYMENT.md) · [Explore the docs](#documentation) · [Report an issue](https://github.com/GreatWharf/erpnext_revolut/issues)
+
+</div>
+
+---
+
+> **Unofficial integration.** This independent community project is not affiliated with, endorsed by, or supported by Revolut, Frappe, or ERPNext. Product names and trademarks belong to their respective owners.
+
+Bring completed Revolut Business movements into ERPNext as **Bank Transactions**, ready for the standard Bank Reconciliation workflow. Set up the connection in your browser, map accounts by currency, and let the scheduler keep the feed up to date.
+
+| Connect | Keep in sync | Stay in control |
+| :--- | :--- | :--- |
+| Guided setup inside ERPNext | Automatic polling every 15 minutes | READ-only Revolut authorization |
+| Server-generated certificates | Historical imports and recovery | Explicit Company and currency mapping |
+| Multiple business connections | Sync logs and source history | Review changed transactions before applying them |
+
+```mermaid
+flowchart LR
+    A[Revolut Business] -->|Read-only API| B[Revolut Bank Feed]
+    B -->|Mapped completed movements| C[ERPNext Bank Transactions]
+    C --> D[Bank Reconciliation]
+```
+
+**Your accounting stays deliberate.** The connector does not initiate payments or create Payment Entries, Journal Entries, transfers, counterparties, or GL Entries. Optional imports include expenses, private receipts, account balances, FX quotes, and accounting reference data.
+
+> **Release status: v0.4.0 — release candidate.** Local unit/mock tests and packaging were validated during authoring. Live ERPNext installation, browser setup, Docker deployment, and Revolut authorization still require validation. See the [verification report](docs/verification.md) and [staging acceptance checklist](docs/acceptance.md) before connecting production accounting.
+
+## From repository to connected account
+
+1. **Include the app in your ERPNext image.** Add this public repository to your existing custom-app build and retain every app already installed on your site.
+2. **Install and migrate the site.** Deploy the image to all Frappe services; install `revolut_bank_feed`, run migration, and verify the scheduler and `long` worker.
+3. **Open Connect Revolut.** Visit `/desk/revolut-setup` as a System Manager and choose your Company, environment, and import start date.
+4. **Authorize read-only access.** Generate a certificate in the wizard, register its public certificate in Revolut Business, and complete the guided consent flow.
+5. **Map, verify, and sync.** Match Revolut accounts to ERPNext Bank Accounts, compare a small import with your statement, then enable routine syncing.
+
+The app runs inside your existing ERPNext deployment. It needs no separate application server. Credentials are configured after installation, never baked into your image.
+
+## Documentation
+
+| Guide | What you will find |
+| :--- | :--- |
+| [Existing Docker deployment](docker/INTEGRATE-EXISTING-DEPLOYMENT.md) | Add the app to your current image and migration workflow |
+| [Browser setup](docs/browser-setup.md) | Certificates, consent, account mapping, and daily controls |
+| [Data coverage](docs/read-only-coverage.md) | Transactions, expenses, receipts, balances, and FX |
+| [Data model](docs/data-model.md) | Identity, fees, revisions, and reconciliation rules |
+| [Operations](docs/operations.md) | Backfill, monitoring, recovery, upgrades, and uninstall |
+| [Security](docs/security.md) | Credential handling, permissions, and webhook verification |
+| [Verification](docs/verification.md) | Checks performed and remaining live validation |
+| [Acceptance checklist](docs/acceptance.md) | Validate the integration against your deployment |
+
+## License
+
+Released under the **[MIT License](LICENSE)**. Copyright © 2026 Revolut Bank Feed contributors. See the license for permission and warranty terms.
+
+---
 
 ## Easy browser setup
 
@@ -61,7 +126,7 @@ Installation and migration reject other Frappe/ERPNext major versions and non-Ma
 Publish the repository to your GitHub organization, then run in your existing v16 bench. Replace the sample URL and site name:
 
 ```bash
-bench get-app https://github.com/YOUR-ORG/revolut_bank_feed --branch main
+bench get-app https://github.com/GreatWharf/erpnext_revolut --branch main
 bench --site erp.example.com backup --with-files
 bench --site erp.example.com install-app revolut_bank_feed
 bench --site erp.example.com migrate
