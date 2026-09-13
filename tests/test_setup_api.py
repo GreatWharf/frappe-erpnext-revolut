@@ -131,3 +131,40 @@ def test_recovery_refuses_existing_secrets(setup_api, monkeypatch):
     with pytest.raises(FeedError):
         mod.generate_certificate("test", recover_missing_key=1)
     assert not writes
+
+
+def test_account_options_exposes_identifying_details_only(setup_api, monkeypatch):
+    mod, doc, _ = setup_api
+    doc.company = "Acme"
+    account = dict(
+        id="a",
+        name=None,
+        currency="GBP",
+        balance=0,
+        state="active",
+        type="current",
+        created_at="2020-01-01",
+        updated_at="2026-09-13",
+        unexpected_secret="must-not-leak",
+    )
+    monkeypatch.setattr(mod, "get_client", lambda d: SimpleNamespace(get=lambda path: [account]))
+    monkeypatch.setattr(mod.frappe, "get_list", lambda *a, **k: [], raising=False)
+    result = mod.account_options("test")["accounts"][0]
+    assert result["balance"] == 0
+    assert result["type"] == "current"
+    assert result["created_at"] == "2020-01-01"
+    assert "unexpected_secret" not in result
+
+
+def test_save_mappings_allows_selecting_only_known_accounts(setup_api, monkeypatch):
+    mod, _, _ = setup_api
+    accounts = [dict(id="known", currency="GBP"), dict(id="unidentified", currency="GBP")]
+    monkeypatch.setattr(mod, "get_client", lambda d: SimpleNamespace(get=lambda path: accounts))
+    monkeypatch.setattr(mod.frappe.db, "get_value", lambda *a, **k: None, raising=False)
+    inserted = []
+    monkeypatch.setattr(
+        mod.frappe, "get_doc", lambda data: SimpleNamespace(insert=lambda: inserted.append(data))
+    )
+    result = mod.save_mappings("test", [dict(account_id="known", currency="GBP", bank_account="Main")], "UTC")
+    assert result == {"saved": 1}
+    assert [r["account_id"] for r in inserted] == ["known"]

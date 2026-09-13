@@ -18,8 +18,8 @@
 5. Copy Revolut’s **Client ID** back into ERPNext and save it.
 6. Open Revolut authorization and approve **READ access**.
 7. Copy the full returned page address into ERPNext within **two minutes**, then finish connecting.
-8. Match each wanted Revolut account to an ERPNext **Bank Account** in the same Company and currency. Leave unwanted accounts blank.
-9. Confirm the statement timezone and activate the feed.
+8. Match each wanted Revolut account to an ERPNext **Bank Account** in the same Company and currency. Choose **Skip for now** for unfamiliar or unwanted accounts. Compare the displayed balance and full Revolut ID before choosing.
+9. Confirm the statement timezone and activate the feed with at least one active mapping. Or choose **Save for later** to keep setup paused, even with every account skipped.
 
 - No API key goes in Docker. ERPNext stores the private key and tokens encrypted.
 - **Create Bank Account** can link an existing bank ledger; create missing ledgers in **Chart of Accounts** first.
@@ -42,6 +42,7 @@ Automatic sync runs every **15 minutes** while the feed, scheduler and workers a
 | Import older history | **Connect Revolut → Import older transactions** |
 | Check progress or errors | **Connect Revolut → Sync logs** |
 | Enable exchange rates or expenses | **Connect Revolut → Choose extra data** |
+| Add more account mappings | **Connect Revolut → Manage accounts (pauses sync)** |
 | Add another business | The connection selector in **Connect Revolut** |
 
 The separate `/banking` screen has its own layout without the Desk sidebar. Its **Home** link returns to Desk. Seeing accounts there does not mean transactions have synced.

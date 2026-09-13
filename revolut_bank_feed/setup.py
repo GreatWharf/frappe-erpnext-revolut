@@ -196,7 +196,13 @@ def account_options(connection):
         currency = frappe.db.get_value("Account", bank.account, "account_currency")
         banks.append({"name": bank.name, "currency": currency})
     return {
-        "accounts": [{k: a.get(k) for k in ("id", "name", "currency", "state")} for a in accounts],
+        "accounts": [
+            {
+                k: a.get(k)
+                for k in ("id", "name", "currency", "state", "balance", "type", "created_at", "updated_at")
+            }
+            for a in accounts
+        ],
         "bank_accounts": banks,
     }
 

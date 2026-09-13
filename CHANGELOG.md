@@ -1,3 +1,12 @@
+# 0.4.3 — Account identification and optional mapping
+
+- Show account names, balances, status, available type, full ID and timestamps during mapping.
+- Label missing or UUID-only names as unnamed; preserve Revolut-provided details without guessing account categories.
+- Skip unfamiliar accounts and start with only the accounts you choose.
+- Save setup for later with all new accounts skipped, without starting sync.
+- Reopen mapping from the dashboard with **Manage accounts (pauses sync)**.
+- Keep existing mappings, encrypted-credential fixes, Home navigation and branding.
+
 # 0.4.0 — Frappe / ERPNext v16
 
 - Targets Frappe/ERPNext v16 with Python 3.14.x, Node 24 and v16 runtime/build examples; v15 retains the separate 0.3 package.

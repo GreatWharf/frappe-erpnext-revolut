@@ -205,8 +205,30 @@ class RevolutSetup {
       await this.load();
     }, true);
   }
+  accountDetails(account) {
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const name = account.name && !uuid.test(account.name) ? account.name : __('Unnamed Revolut account');
+    const missing = __('Not provided by Revolut');
+    const balance = account.balance === null || account.balance === undefined ? missing : `${account.balance} ${account.currency || ''}`;
+    const lines = [
+      [__('Balance'), balance], [__('Status'), account.state || missing],
+      [__('Type'), account.type || missing], [__('Revolut ID'), account.id || missing],
+      [__('Created'), account.created_at || missing], [__('Updated'), account.updated_at || missing],
+    ];
+    return `<strong>${this.esc(name)}</strong><div class="rb-muted" style="overflow-wrap:anywhere">${lines.map(([label, value]) => `<div>${this.esc(label)}: ${this.esc(value)}</div>`).join('')}</div>`;
+  }
+  mappingSelections(selections) {
+    return selections.filter(s => s.control.get_value()).map(s => ({account_id: s.account.id, currency: s.account.currency, bank_account: s.control.get_value()}));
+  }
+  async openAccountMappings(doc) {
+    if (doc.enabled) await this.call('pause', {connection: doc.name});
+    await this.load();
+  }
+  async saveMappingProgress(doc, rows, timezone) {
+    if (rows.length) await this.call('save_mappings', {connection: doc.name, selections: JSON.stringify(rows), timezone});
+  }
   async accounts(doc) {
-    this.intro('Choose where transactions go', 'Your Revolut accounts are listed below. Match each one to an ERPNext Bank Account in the same currency.');
+    this.intro('Choose where transactions go', 'Choose the accounts you recognise. Match each one to an ERPNext Bank Account in the same currency, or skip it for now.');
     const options = await this.call('account_options', {connection: doc.name});
     const fields = $('<div class="rb-fields">').appendTo(this.card);
     const timezone = this.control(fields, 'timezone', 'Data', 'Statement timezone', {reqd: 1});
@@ -214,25 +236,38 @@ class RevolutSetup {
     const table = $('<table class="rb-table"><thead><tr><th></th><th></th><th></th></tr></thead><tbody></tbody></table>').appendTo(this.card);
     table.find('th').eq(0).text(__('Revolut account')); table.find('th').eq(1).text(__('Currency')); table.find('th').eq(2).text(__('ERPNext Bank Account'));
     const selections = [];
-    options.accounts.forEach((account, index) => {
+    options.accounts.forEach(account => {
       const row = $('<tr>').appendTo(table.find('tbody'));
-      $('<td>').text(account.name || account.id).appendTo(row);
+      $('<td>').html(this.accountDetails(account)).appendTo(row);
       $('<td>').text(account.currency).appendTo(row);
       const cell = $('<td>').appendTo(row);
       const existing = this.data.maps.find(m => m.account_id === account.id && m.currency === account.currency);
       const choices = options.bank_accounts.filter(b => b.currency === account.currency).map(b => b.name);
-      const control = this.control(cell, `bank_${index}`, 'Select', `Bank Account (${account.currency})`, {options: [''].concat(choices), reqd: 1});
-      if (existing) { control.set_value(existing.bank_account); control.df.read_only = 1; control.refresh(); }
+      const select = $('<select class="form-control">').attr('aria-label', `${__('ERPNext Bank Account for')} ${account.name || account.id} (${account.currency})`).appendTo(cell);
+      $('<option>').val('').text(__('Skip for now')).appendTo(select);
+      choices.forEach(name => $('<option>').val(name).text(name).appendTo(select));
+      if (existing) {
+        if (!choices.includes(existing.bank_account)) $('<option>').val(existing.bank_account).text(existing.bank_account).appendTo(select);
+        select.val(existing.bank_account).prop('disabled', true);
+        $('<p class="rb-muted">').text(existing.enabled ? __('Existing mapping; manage it in Advanced settings.') : __('Mapping paused. Manage it in Advanced settings.')).appendTo(cell);
+      }
+      const control = {get_value: () => select.val()};
       selections.push({account, control});
     });
     if (!options.accounts.length) $('<p>').text(__('Revolut returned no accounts. Check the Business account and environment.')).appendTo(this.card);
-    $('<div class="rb-note">').text(__('Match every account to start. Use Advanced settings to exclude accounts or adjust fee rules.')).appendTo(this.card);
+    $('<div class="rb-note">').text(__('Unsure which account this is? Compare its balance and ID in Revolut, or choose Skip for now. Balances are from Revolut, not your ERPNext ledger. Manage existing mappings and fee rules in Advanced settings.')).appendTo(this.card);
     const actions = $('<div class="rb-actions">').appendTo(this.card);
     this.action(actions, 'Create an ERPNext Bank Account', () => this.newBank(doc));
+    this.action(actions, 'Save for later', async () => {
+      await this.saveMappingProgress(doc, this.mappingSelections(selections), timezone.get_value());
+      frappe.show_alert(__('Setup saved. Sync stays paused. Return to this connection whenever you are ready to map more accounts.'));
+      await this.load();
+    });
+    $('<p class="rb-muted">').text(__('You can save with every account skipped. After starting, use Manage accounts to add more. Use Import older transactions to include their earlier activity.')).appendTo(this.card);
     this.action(actions, 'Save accounts and start sync', async () => {
-      if (!selections.length || selections.some(s => !s.control.get_value())) return frappe.msgprint(__('Select an ERPNext Bank Account for every listed currency account.'));
-      const rows = selections.map(s => ({account_id: s.account.id, currency: s.account.currency, bank_account: s.control.get_value()}));
-      await this.call('save_mappings', {connection: doc.name, selections: JSON.stringify(rows), timezone: timezone.get_value()});
+      const rows = this.mappingSelections(selections);
+      if (!rows.length) return frappe.msgprint(__('Select at least one ERPNext Bank Account. You can skip accounts you have not identified.'));
+      await this.saveMappingProgress(doc, rows, timezone.get_value());
       await this.call('activate', {connection: doc.name}); await this.load();
     }, true);
     if (this.data.maps.length) this.action(actions, 'Resume existing feed', async () => {
@@ -264,6 +299,7 @@ class RevolutSetup {
     const actions = $('<div class="rb-actions">').appendTo(this.card);
     this.action(actions, 'Sync now', async () => { await this.call('sync_now', {connection: doc.name}, 'api'); frappe.show_alert(__('Sync queued.')); }, true);
     this.action(actions, 'Refresh status', () => this.load());
+    this.action(actions, 'Manage accounts (pauses sync)', () => this.openAccountMappings(doc));
     this.action(actions, 'Bank transactions', () => frappe.set_route('List', 'Bank Transaction', {company: doc.company}));
     this.action(actions, 'Review transactions', () => frappe.set_route('List', 'Revolut Source Transaction', {connection: doc.name, needs_review: 1}));
     this.action(actions, 'Sync logs', () => frappe.set_route('List', 'Revolut Sync Log', {connection: doc.name}));
