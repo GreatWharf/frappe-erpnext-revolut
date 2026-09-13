@@ -6,7 +6,7 @@ app_email = ""
 app_license = "MIT"
 required_apps = ["erpnext"]
 app_home = "/desk/revolut-setup"
-app_logo_url = "/assets/revolut_bank_feed/images/bank-feed.svg"
+app_logo_url = "/assets/revolut_bank_feed/images/revolut-business-icon.svg"
 add_to_apps_screen = [
     {
         "name": app_name,

@@ -87,6 +87,10 @@ def after_migrate():
         "Revolut Webhook Event", ["connection", "status", "next_attempt_at"], "revolut_inbox_due"
     )
 
+    from revolut_bank_feed.navigation import ensure_navigation
+
+    ensure_navigation()
+
 
 def before_uninstall():
     if frappe.db.count("Revolut Connection", {"enabled": 1}):

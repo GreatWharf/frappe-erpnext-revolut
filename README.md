@@ -1,9 +1,7 @@
 <p align="center">
-  <img src="docs/images/erpnext.svg" alt="ERPNext" height="56" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/revolut-business-white.png" />
-    <img src="docs/images/revolut-business.png" alt="Revolut Business" width="220" />
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/integration-dark.svg" />
+    <img src="docs/images/integration-light.svg" alt="ERPNext ↔ Revolut Business" width="480" />
   </picture>
 </p>
 
@@ -47,9 +45,9 @@
 
 ## Connect your account
 
-1. Open **Connect Revolut** in ERPNext, or visit `/desk/revolut-setup`.
+1. Open **Revolut Bank Feed** from Home, or **Banking → Connect Revolut**.
 2. Choose your Company, environment, and import start date.
-3. Click **Generate certificate**.
+3. Click **Create certificate**.
 4. In Revolut Business → **Settings → APIs → Business API**, register the public certificate and redirect URL shown.
 5. Paste Revolut’s **Client ID** into the setup screen.
 6. Approve **READ access**, then paste the returned URL into the wizard within two minutes.
@@ -58,6 +56,14 @@
 - Uses a certificate and OAuth; no API key to paste into Docker.
 - Private keys and tokens are stored encrypted in ERPNext.
 - [Step-by-step setup](docs/browser-setup.md)
+
+## Finding your way around
+
+- Direct setup route: `/desk/revolut-setup`.
+- **Home → Revolut Bank Feed:** connection, account mappings, and sync logs.
+- **Accounting → Banking → Connect Revolut:** set up or manage the feed.
+- **Banking → Banking app:** ERPNext’s separate reconciliation screen, with a Home link back to Desk.
+- Seeing Bank Accounts does not mean transactions have synced. Finish authorization, map accounts, and start the feed first.
 
 ## Before going live
 

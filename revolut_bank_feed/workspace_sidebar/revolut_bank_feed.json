@@ -1,0 +1,59 @@
+{
+  "doctype": "Workspace Sidebar",
+  "name": "Revolut Bank Feed",
+  "title": "Revolut Bank Feed",
+  "app": "revolut_bank_feed",
+  "module": "Revolut Bank Feed",
+  "standard": 1,
+  "header_icon": "landmark",
+  "items": [
+    {
+      "type": "Link",
+      "label": "Connect Revolut",
+      "link_type": "Page",
+      "link_to": "revolut-setup",
+      "icon": "plug",
+      "child": 0
+    },
+    {
+      "type": "Link",
+      "label": "Banking app",
+      "link_type": "URL",
+      "url": "/banking",
+      "icon": "landmark",
+      "child": 0
+    },
+    {
+      "type": "Link",
+      "label": "Bank transactions",
+      "link_type": "DocType",
+      "link_to": "Bank Transaction",
+      "icon": "arrow-left-right",
+      "child": 0
+    },
+    {
+      "type": "Link",
+      "label": "Account mappings",
+      "link_type": "DocType",
+      "link_to": "Revolut Account Map",
+      "icon": "link",
+      "child": 0
+    },
+    {
+      "type": "Link",
+      "label": "Sync logs",
+      "link_type": "DocType",
+      "link_to": "Revolut Sync Log",
+      "icon": "list",
+      "child": 0
+    },
+    {
+      "type": "Link",
+      "label": "Connection settings",
+      "link_type": "DocType",
+      "link_to": "Revolut Connection",
+      "icon": "settings",
+      "child": 0
+    }
+  ]
+}

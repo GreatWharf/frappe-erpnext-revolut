@@ -1,0 +1,17 @@
+{
+  "doctype": "Desktop Icon",
+  "name": "Revolut Bank Feed",
+  "label": "Revolut Bank Feed",
+  "icon_type": "App",
+  "link_type": "External",
+  "link": "/desk/revolut-setup?sidebar=Revolut%20Bank%20Feed",
+  "app": "revolut_bank_feed",
+  "standard": 1,
+  "hidden": 0,
+  "logo_url": "/assets/revolut_bank_feed/images/revolut-business-icon.svg",
+  "roles": [
+    {
+      "role": "System Manager"
+    }
+  ]
+}
