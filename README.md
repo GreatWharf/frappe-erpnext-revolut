@@ -11,6 +11,7 @@
 
 - Import Revolut Business transactions into ERPNext.
 - Reconcile them using ERPNext’s standard Bank Reconciliation.
+- Built by Great Wharf for internal use and shared publicly.
 - Independent project. Not affiliated with or endorsed by Revolut or Frappe.
 - **Release candidate:** validate on staging before using live accounts.
 
@@ -45,6 +46,8 @@
 
 ## Connect your account
 
+Requires **Revolut Business Grow or above**. [Revolut API requirements](https://help.revolut.com/business/help/integrating-with-external-apps/revolut-business-api/question-using-revolut-business-api/).
+
 1. Open **Revolut Bank Feed** from Home, or **Banking → Connect Revolut**.
 2. Choose your Company, environment, and import start date.
 3. Click **Create certificate**.
@@ -73,6 +76,9 @@
 - [Validation checklist](docs/acceptance.md) · [Test report](docs/verification.md)
 
 ## More help
+
+- [Documentation home](docs/README.md)
+- [Exchange rates](docs/exchange-rates.md)
 
 - [Data coverage](docs/read-only-coverage.md)
 - [Troubleshooting and upgrades](docs/operations.md)
