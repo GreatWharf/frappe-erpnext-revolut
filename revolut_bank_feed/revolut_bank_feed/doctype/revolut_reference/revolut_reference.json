@@ -1,0 +1,132 @@
+{
+  "doctype": "DocType",
+  "name": "Revolut Reference",
+  "module": "Revolut Bank Feed",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "field:record_key",
+  "engine": "InnoDB",
+  "allow_rename": 0,
+  "field_order": [
+    "record_key",
+    "connection",
+    "company",
+    "remote_id",
+    "display_name",
+    "upstream_state",
+    "last_seen_at",
+    "fingerprint",
+    "reference_type",
+    "code",
+    "group_id",
+    "data"
+  ],
+  "fields": [
+    {
+      "fieldname": "record_key",
+      "fieldtype": "Data",
+      "label": "Record Key",
+      "read_only": 1,
+      "no_copy": 1,
+      "unique": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "connection",
+      "fieldtype": "Link",
+      "label": "Connection",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Revolut Connection",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Company",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "remote_id",
+      "fieldtype": "Data",
+      "label": "Remote Id",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "display_name",
+      "fieldtype": "Data",
+      "label": "Display Name",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "upstream_state",
+      "fieldtype": "Data",
+      "label": "Upstream State",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "last_seen_at",
+      "fieldtype": "Datetime",
+      "label": "Last Seen At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "fingerprint",
+      "fieldtype": "Data",
+      "label": "Fingerprint",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "reference_type",
+      "fieldtype": "Data",
+      "label": "Reference Type",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "code",
+      "fieldtype": "Data",
+      "label": "Code",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "group_id",
+      "fieldtype": "Data",
+      "label": "Group Id",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "data",
+      "fieldtype": "Code",
+      "label": "Data",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "JSON"
+    }
+  ],
+  "title_field": "display_name",
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

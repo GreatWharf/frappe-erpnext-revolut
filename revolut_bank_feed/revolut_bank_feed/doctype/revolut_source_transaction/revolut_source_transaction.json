@@ -1,0 +1,152 @@
+{
+  "doctype": "DocType",
+  "name": "Revolut Source Transaction",
+  "module": "Revolut Bank Feed",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "hash",
+  "allow_rename": 0,
+  "engine": "InnoDB",
+  "track_changes": 0,
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "field_order": [
+    "connection",
+    "company",
+    "transaction_id",
+    "upstream_state",
+    "created_at",
+    "updated_at",
+    "last_checked",
+    "payload",
+    "payload_hash",
+    "needs_review",
+    "review_reason",
+    "reviewed_by",
+    "reviewed_at",
+    "review_note"
+  ],
+  "fields": [
+    {
+      "fieldname": "connection",
+      "fieldtype": "Link",
+      "label": "Connection",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Revolut Connection",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Company",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "transaction_id",
+      "fieldtype": "Data",
+      "label": "Transaction Id",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "upstream_state",
+      "fieldtype": "Data",
+      "label": "Upstream State",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "created_at",
+      "fieldtype": "Data",
+      "label": "Created At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "updated_at",
+      "fieldtype": "Data",
+      "label": "Updated At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "last_checked",
+      "fieldtype": "Datetime",
+      "label": "Last Checked",
+      "read_only": 1,
+      "no_copy": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "payload",
+      "fieldtype": "Code",
+      "label": "Payload",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "JSON"
+    },
+    {
+      "fieldname": "payload_hash",
+      "fieldtype": "Data",
+      "label": "Payload Hash",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "needs_review",
+      "fieldtype": "Check",
+      "label": "Needs Review",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "review_reason",
+      "fieldtype": "Small Text",
+      "label": "Review Reason",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "reviewed_by",
+      "fieldtype": "Link",
+      "label": "Reviewed By",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "User"
+    },
+    {
+      "fieldname": "reviewed_at",
+      "fieldtype": "Datetime",
+      "label": "Reviewed At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "review_note",
+      "fieldtype": "Small Text",
+      "label": "Review Note",
+      "read_only": 1,
+      "no_copy": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "actions": [],
+  "links": []
+}

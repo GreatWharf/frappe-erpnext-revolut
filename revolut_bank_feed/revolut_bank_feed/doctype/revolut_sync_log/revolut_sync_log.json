@@ -1,0 +1,105 @@
+{
+  "doctype": "DocType",
+  "name": "Revolut Sync Log",
+  "module": "Revolut Bank Feed",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "hash",
+  "allow_rename": 0,
+  "engine": "InnoDB",
+  "track_changes": 0,
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "field_order": [
+    "connection",
+    "company",
+    "started_at",
+    "finished_at",
+    "status",
+    "transactions_seen",
+    "bank_rows_created",
+    "review_count",
+    "error_code"
+  ],
+  "fields": [
+    {
+      "fieldname": "connection",
+      "fieldtype": "Link",
+      "label": "Connection",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Revolut Connection",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Company",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "started_at",
+      "fieldtype": "Datetime",
+      "label": "Started At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "finished_at",
+      "fieldtype": "Datetime",
+      "label": "Finished At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Data",
+      "label": "Status",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "transactions_seen",
+      "fieldtype": "Int",
+      "label": "Transactions Seen",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "bank_rows_created",
+      "fieldtype": "Int",
+      "label": "Bank Rows Created",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "review_count",
+      "fieldtype": "Int",
+      "label": "Review Count",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "error_code",
+      "fieldtype": "Data",
+      "label": "Error Code",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "actions": [],
+  "links": []
+}

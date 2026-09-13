@@ -1,0 +1,14 @@
+{
+  "doctype": "Page",
+  "name": "revolut-setup",
+  "page_name": "revolut-setup",
+  "title": "Connect Revolut",
+  "module": "Revolut Bank Feed",
+  "standard": "Yes",
+  "system_page": 0,
+  "roles": [
+    {
+      "role": "System Manager"
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "doctype": "DocType",
+  "name": "Revolut Account Map",
+  "module": "Revolut Bank Feed",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "hash",
+  "allow_rename": 0,
+  "engine": "InnoDB",
+  "track_changes": 0,
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "field_order": [
+    "connection",
+    "company",
+    "environment",
+    "account_id",
+    "currency",
+    "bank_account",
+    "enabled",
+    "timezone",
+    "fee_policy",
+    "source_account_key"
+  ],
+  "fields": [
+    {
+      "fieldname": "connection",
+      "fieldtype": "Link",
+      "label": "Connection",
+      "options": "Revolut Connection",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Company",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "environment",
+      "fieldtype": "Data",
+      "label": "Environment",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "account_id",
+      "fieldtype": "Data",
+      "label": "Account Id",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "currency",
+      "fieldtype": "Link",
+      "label": "Currency",
+      "options": "Currency",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "bank_account",
+      "fieldtype": "Link",
+      "label": "Bank Account",
+      "options": "Bank Account",
+      "reqd": 1,
+      "unique": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "enabled",
+      "fieldtype": "Check",
+      "label": "Enabled",
+      "default": "1"
+    },
+    {
+      "fieldname": "timezone",
+      "fieldtype": "Data",
+      "label": "Timezone",
+      "reqd": 1,
+      "default": "UTC"
+    },
+    {
+      "fieldname": "fee_policy",
+      "fieldtype": "Select",
+      "label": "Fee Policy",
+      "options": "Review\nAmount includes fee\nDeduct fee from amount",
+      "default": "Review",
+      "reqd": 1
+    },
+    {
+      "fieldname": "source_account_key",
+      "fieldtype": "Data",
+      "label": "Source Account Key",
+      "read_only": 1,
+      "no_copy": 1,
+      "unique": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1,
+      "create": 1,
+      "write": 1,
+      "delete": 1
+    }
+  ],
+  "actions": [],
+  "links": []
+}

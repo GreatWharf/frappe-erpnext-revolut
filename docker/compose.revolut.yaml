@@ -1,0 +1,20 @@
+# Merge with the official frappe_docker compose.yaml and your DB/Redis/proxy overrides.
+# Every Frappe service must run the same app-containing image.
+x-feed-image: &feed-image
+  image: ${REVOLUT_ERPNEXT_IMAGE:?Set REVOLUT_ERPNEXT_IMAGE to your custom v16 image}
+  pull_policy: if_not_present
+services:
+  configurator:
+    <<: *feed-image
+  backend:
+    <<: *feed-image
+  frontend:
+    <<: *feed-image
+  websocket:
+    <<: *feed-image
+  scheduler:
+    <<: *feed-image
+  queue-short:
+    <<: *feed-image
+  queue-long:
+    <<: *feed-image

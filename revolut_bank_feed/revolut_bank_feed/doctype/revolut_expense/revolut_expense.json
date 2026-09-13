@@ -1,0 +1,239 @@
+{
+  "doctype": "DocType",
+  "name": "Revolut Expense",
+  "module": "Revolut Bank Feed",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "field:record_key",
+  "engine": "InnoDB",
+  "allow_rename": 0,
+  "field_order": [
+    "record_key",
+    "connection",
+    "company",
+    "remote_id",
+    "display_name",
+    "upstream_state",
+    "last_seen_at",
+    "fingerprint",
+    "expense_date",
+    "amount",
+    "currency",
+    "merchant",
+    "payer",
+    "transaction_type",
+    "transaction_id",
+    "source_transaction",
+    "description",
+    "receipt_files",
+    "linked_doctype",
+    "linked_document",
+    "data",
+    "receipt_pending",
+    "receipt_last_checked",
+    "receipt_error_code",
+    "accounting_review_required"
+  ],
+  "fields": [
+    {
+      "fieldname": "record_key",
+      "fieldtype": "Data",
+      "label": "Record Key",
+      "read_only": 1,
+      "no_copy": 1,
+      "unique": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "connection",
+      "fieldtype": "Link",
+      "label": "Connection",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Revolut Connection",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Company",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "remote_id",
+      "fieldtype": "Data",
+      "label": "Remote Id",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "display_name",
+      "fieldtype": "Data",
+      "label": "Display Name",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "upstream_state",
+      "fieldtype": "Data",
+      "label": "Upstream State",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "last_seen_at",
+      "fieldtype": "Datetime",
+      "label": "Last Seen At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "fingerprint",
+      "fieldtype": "Data",
+      "label": "Fingerprint",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "expense_date",
+      "fieldtype": "Datetime",
+      "label": "Expense Date (UTC)",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "amount",
+      "fieldtype": "Currency",
+      "label": "Amount",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1,
+      "options": "currency"
+    },
+    {
+      "fieldname": "currency",
+      "fieldtype": "Data",
+      "label": "Currency",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "merchant",
+      "fieldtype": "Data",
+      "label": "Merchant",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "payer",
+      "fieldtype": "Data",
+      "label": "Payer",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "transaction_type",
+      "fieldtype": "Data",
+      "label": "Transaction Type",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "transaction_id",
+      "fieldtype": "Data",
+      "label": "Transaction Id",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "source_transaction",
+      "fieldtype": "Link",
+      "label": "Source Transaction",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Revolut Source Transaction"
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Small Text",
+      "label": "Description",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "receipt_files",
+      "fieldtype": "Code",
+      "label": "Receipt Files",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "JSON"
+    },
+    {
+      "fieldname": "linked_doctype",
+      "fieldtype": "Link",
+      "label": "Linked Doctype",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "DocType"
+    },
+    {
+      "fieldname": "linked_document",
+      "fieldtype": "Dynamic Link",
+      "label": "Linked Document",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "linked_doctype"
+    },
+    {
+      "fieldname": "data",
+      "fieldtype": "Code",
+      "label": "Data",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "JSON"
+    },
+    {
+      "fieldname": "receipt_pending",
+      "fieldtype": "Check",
+      "label": "Receipt Pending",
+      "read_only": 1
+    },
+    {
+      "fieldname": "receipt_last_checked",
+      "fieldtype": "Datetime",
+      "label": "Receipt Last Checked",
+      "read_only": 1
+    },
+    {
+      "fieldname": "receipt_error_code",
+      "fieldtype": "Data",
+      "label": "Receipt Error Code",
+      "read_only": 1
+    },
+    {
+      "fieldname": "accounting_review_required",
+      "label": "Linked Accounting Document Needs Review",
+      "fieldtype": "Check",
+      "read_only": 1,
+      "in_list_view": 1
+    }
+  ],
+  "title_field": "display_name",
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

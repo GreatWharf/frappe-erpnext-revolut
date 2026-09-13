@@ -1,0 +1,79 @@
+name: Build ERPNext image
+on:
+  workflow_dispatch:
+    inputs:
+      frappe_ref:
+        description: Compatible Frappe v16 branch or tag (match your existing deployment)
+        default: version-16
+        required: true
+      erpnext_ref:
+        description: Compatible ERPNext v16 branch or tag (match your existing deployment)
+        default: version-16
+        required: true
+      docker_ref:
+        description: Reviewed frappe_docker commit or branch
+        default: main
+        required: true
+permissions:
+  contents: read
+  packages: write
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: app
+      - uses: actions/checkout@v4
+        with:
+          repository: frappe/frappe_docker
+          ref: ${{ inputs.docker_ref }}
+          path: frappe-docker
+      - name: Prepare public repository build
+        id: config
+        env:
+          REPOSITORY: ${{ github.repository }}
+          APP_REF: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          PRIVATE_REPO: ${{ github.event.repository.private }}
+          ERPNEXT_REF: ${{ inputs.erpnext_ref }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          if os.environ['PRIVATE_REPO'] == 'true':
+              raise SystemExit('This browser workflow requires a public source repository. Use the documented private build process instead.')
+          apps = [{'url': 'https://github.com/frappe/erpnext', 'branch': os.environ['ERPNEXT_REF']},
+                  {'url': 'https://github.com/' + os.environ['REPOSITORY'], 'branch': os.environ['APP_REF']}]
+          extra = json.loads(Path('app/docker/additional-apps.json').read_text())
+          if not isinstance(extra, list):
+              raise SystemExit('additional-apps.json must be a list')
+          apps.extend(extra)
+          Path('frappe-docker/apps.json').write_text(json.dumps(apps))
+          tag = 'ghcr.io/' + os.environ['REPOSITORY'].lower() + ':16-' + os.environ['COMMIT'][:12]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('image=' + tag + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('Image to deploy after successful build: `' + tag + '`\n\nUse a release tag when running this workflow so the app source does not move during the build.\n')
+          PY
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: frappe-docker
+          file: frappe-docker/images/custom/Containerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.config.outputs.image }}
+          secret-files: |
+            apps_json=frappe-docker/apps.json
+          build-args: |
+            FRAPPE_PATH=https://github.com/frappe/frappe
+            FRAPPE_BRANCH=${{ inputs.frappe_ref }}
+            PYTHON_VERSION=3.14
+            NODE_VERSION=24
+            INSTALL_CHROMIUM=false

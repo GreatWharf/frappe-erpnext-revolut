@@ -1,0 +1,14 @@
+.git
+.venv
+venv
+__pycache__
+.pytest_cache
+.ruff_cache
+.env
+*.pem
+*.key
+*.cer
+*.crt
+apps.json
+dist
+build

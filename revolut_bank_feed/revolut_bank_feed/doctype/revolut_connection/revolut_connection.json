@@ -1,0 +1,553 @@
+{
+  "doctype": "DocType",
+  "name": "Revolut Connection",
+  "module": "Revolut Bank Feed",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "hash",
+  "allow_rename": 0,
+  "engine": "InnoDB",
+  "track_changes": 0,
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "field_order": [
+    "connection_name",
+    "company",
+    "environment",
+    "enabled",
+    "client_id",
+    "redirect_uri",
+    "issuer",
+    "private_key",
+    "access_token",
+    "refresh_token",
+    "token_expires_at",
+    "authorized",
+    "historical_from",
+    "lookback_days",
+    "window_days",
+    "audit_window_days",
+    "audit_enabled",
+    "poll_cursor",
+    "audit_cursor",
+    "last_audit_at",
+    "last_attempt_at",
+    "last_success_at",
+    "last_status",
+    "last_error_code",
+    "backfill_next",
+    "backfill_end",
+    "webhook_enabled",
+    "webhook_key",
+    "webhook_secret",
+    "previous_webhook_secret",
+    "webhook_url",
+    "poll_window_start",
+    "poll_window_end",
+    "poll_window_to",
+    "backfill_window_start",
+    "backfill_window_end",
+    "backfill_window_to",
+    "audit_window_start",
+    "audit_window_end",
+    "audit_window_to",
+    "public_certificate",
+    "certificate_expires_on",
+    "poll_overlap_minutes",
+    "last_recent_at",
+    "recent_window_start",
+    "recent_window_end",
+    "recent_window_to",
+    "extras_section",
+    "sync_fx",
+    "sync_expenses",
+    "sync_receipts",
+    "sync_catalogs",
+    "extras_last_status",
+    "extras_error_code",
+    "expense_cursor",
+    "expense_audit_cursor",
+    "expense_window_start",
+    "expense_window_end",
+    "expense_window_to",
+    "expense_audit_window_start",
+    "expense_audit_window_end",
+    "expense_audit_window_to",
+    "last_fx_at",
+    "last_catalog_at",
+    "last_expense_audit_at",
+    "last_extras_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "connection_name",
+      "fieldtype": "Data",
+      "label": "Connection Name",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "options": "Company",
+      "reqd": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "environment",
+      "fieldtype": "Select",
+      "label": "Environment",
+      "options": "Sandbox\nProduction",
+      "default": "Sandbox",
+      "reqd": 1
+    },
+    {
+      "fieldname": "enabled",
+      "fieldtype": "Check",
+      "label": "Enabled",
+      "default": "0"
+    },
+    {
+      "fieldname": "client_id",
+      "fieldtype": "Data",
+      "label": "Client Id",
+      "reqd": 1
+    },
+    {
+      "fieldname": "redirect_uri",
+      "fieldtype": "Data",
+      "label": "Redirect Uri",
+      "reqd": 1,
+      "description": "Exact HTTPS URI registered with Revolut; copy the returned code into Exchange Authorization Code."
+    },
+    {
+      "fieldname": "issuer",
+      "fieldtype": "Data",
+      "label": "Issuer",
+      "reqd": 1,
+      "description": "Hostname of the registered redirect URI, without https://"
+    },
+    {
+      "fieldname": "private_key",
+      "fieldtype": "Password",
+      "label": "Private Key",
+      "permlevel": 1,
+      "description": "Base64-encoded RSA PEM private key. Use the Load Private Key button."
+    },
+    {
+      "fieldname": "access_token",
+      "fieldtype": "Password",
+      "label": "Access Token",
+      "read_only": 1,
+      "no_copy": 1,
+      "permlevel": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "refresh_token",
+      "fieldtype": "Password",
+      "label": "Refresh Token",
+      "read_only": 1,
+      "no_copy": 1,
+      "permlevel": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "token_expires_at",
+      "fieldtype": "Float",
+      "label": "Token Expires At",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "authorized",
+      "fieldtype": "Check",
+      "label": "Authorized",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "historical_from",
+      "fieldtype": "Date",
+      "label": "Historical From",
+      "reqd": 1,
+      "description": "Earliest creation date to import/audit, in UTC."
+    },
+    {
+      "fieldname": "lookback_days",
+      "fieldtype": "Int",
+      "label": "Daily Correction Window (Days)",
+      "default": "7",
+      "reqd": 1
+    },
+    {
+      "fieldname": "window_days",
+      "fieldtype": "Int",
+      "label": "Window Days",
+      "default": "7",
+      "reqd": 1
+    },
+    {
+      "fieldname": "audit_window_days",
+      "fieldtype": "Int",
+      "label": "Audit Window Days",
+      "default": "30",
+      "reqd": 1
+    },
+    {
+      "fieldname": "audit_enabled",
+      "fieldtype": "Check",
+      "label": "Audit Enabled",
+      "default": "1"
+    },
+    {
+      "fieldname": "poll_cursor",
+      "fieldtype": "Data",
+      "label": "Poll Cursor",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "audit_cursor",
+      "fieldtype": "Data",
+      "label": "Audit Cursor",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "last_audit_at",
+      "fieldtype": "Datetime",
+      "label": "Last Audit At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "last_attempt_at",
+      "fieldtype": "Datetime",
+      "label": "Last Attempt At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "last_success_at",
+      "fieldtype": "Datetime",
+      "label": "Last Success At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "last_status",
+      "fieldtype": "Data",
+      "label": "Last Status",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "last_error_code",
+      "fieldtype": "Data",
+      "label": "Last Error Code",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "backfill_next",
+      "fieldtype": "Data",
+      "label": "Backfill Next",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "backfill_end",
+      "fieldtype": "Data",
+      "label": "Backfill End",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "webhook_enabled",
+      "fieldtype": "Check",
+      "label": "Webhook Enabled",
+      "default": "0"
+    },
+    {
+      "fieldname": "webhook_key",
+      "fieldtype": "Data",
+      "label": "Webhook Key",
+      "read_only": 1,
+      "no_copy": 1,
+      "unique": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "webhook_secret",
+      "fieldtype": "Password",
+      "label": "Webhook Secret",
+      "permlevel": 1
+    },
+    {
+      "fieldname": "previous_webhook_secret",
+      "fieldtype": "Password",
+      "label": "Previous Webhook Secret",
+      "permlevel": 1
+    },
+    {
+      "fieldname": "webhook_url",
+      "fieldtype": "Small Text",
+      "label": "Webhook Url",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "poll_window_start",
+      "fieldtype": "Data",
+      "label": "Poll Window Start",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "poll_window_end",
+      "fieldtype": "Data",
+      "label": "Poll Window End",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "poll_window_to",
+      "fieldtype": "Data",
+      "label": "Poll Window To",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "backfill_window_start",
+      "fieldtype": "Data",
+      "label": "Backfill Window Start",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "backfill_window_end",
+      "fieldtype": "Data",
+      "label": "Backfill Window End",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "backfill_window_to",
+      "fieldtype": "Data",
+      "label": "Backfill Window To",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "audit_window_start",
+      "fieldtype": "Data",
+      "label": "Audit Window Start",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "audit_window_end",
+      "fieldtype": "Data",
+      "label": "Audit Window End",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "audit_window_to",
+      "fieldtype": "Data",
+      "label": "Audit Window To",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "public_certificate",
+      "fieldtype": "Code",
+      "label": "Public Certificate",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "certificate_expires_on",
+      "fieldtype": "Date",
+      "label": "Certificate Expires On",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "poll_overlap_minutes",
+      "fieldtype": "Int",
+      "label": "Routine overlap (minutes)",
+      "default": "60"
+    },
+    {
+      "fieldname": "last_recent_at",
+      "fieldtype": "Datetime",
+      "label": "Last recent correction check",
+      "read_only": 1
+    },
+    {
+      "fieldname": "recent_window_start",
+      "fieldtype": "Data",
+      "label": "Recent Window Start",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "recent_window_end",
+      "fieldtype": "Data",
+      "label": "Recent Window End",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "recent_window_to",
+      "fieldtype": "Data",
+      "label": "Recent Window To",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "extras_section",
+      "fieldtype": "Section Break",
+      "label": "Additional read-only data"
+    },
+    {
+      "fieldname": "sync_fx",
+      "fieldtype": "Check",
+      "label": "Import daily FX quotes",
+      "default": "0"
+    },
+    {
+      "fieldname": "sync_expenses",
+      "fieldtype": "Check",
+      "label": "Import expenses (Production only)",
+      "default": "0"
+    },
+    {
+      "fieldname": "sync_receipts",
+      "fieldtype": "Check",
+      "label": "Download private expense receipts",
+      "default": "0"
+    },
+    {
+      "fieldname": "sync_catalogs",
+      "fieldtype": "Check",
+      "label": "Import accounting categories, taxes and labels",
+      "default": "0"
+    },
+    {
+      "fieldname": "extras_last_status",
+      "fieldtype": "Data",
+      "label": "Extras Last Status",
+      "read_only": 1
+    },
+    {
+      "fieldname": "extras_error_code",
+      "fieldtype": "Data",
+      "label": "Extras Error Code",
+      "read_only": 1
+    },
+    {
+      "fieldname": "expense_cursor",
+      "fieldtype": "Data",
+      "label": "Expense Cursor",
+      "read_only": 1
+    },
+    {
+      "fieldname": "expense_audit_cursor",
+      "fieldtype": "Data",
+      "label": "Expense Audit Cursor",
+      "read_only": 1
+    },
+    {
+      "fieldname": "expense_window_start",
+      "fieldtype": "Data",
+      "label": "Expense Window Start",
+      "read_only": 1
+    },
+    {
+      "fieldname": "expense_window_end",
+      "fieldtype": "Data",
+      "label": "Expense Window End",
+      "read_only": 1
+    },
+    {
+      "fieldname": "expense_window_to",
+      "fieldtype": "Data",
+      "label": "Expense Window To",
+      "read_only": 1
+    },
+    {
+      "fieldname": "expense_audit_window_start",
+      "fieldtype": "Data",
+      "label": "Expense Audit Window Start",
+      "read_only": 1
+    },
+    {
+      "fieldname": "expense_audit_window_end",
+      "fieldtype": "Data",
+      "label": "Expense Audit Window End",
+      "read_only": 1
+    },
+    {
+      "fieldname": "expense_audit_window_to",
+      "fieldtype": "Data",
+      "label": "Expense Audit Window To",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_fx_at",
+      "fieldtype": "Datetime",
+      "label": "Last Fx At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_catalog_at",
+      "fieldtype": "Datetime",
+      "label": "Last Catalog At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_expense_audit_at",
+      "fieldtype": "Datetime",
+      "label": "Last Expense Audit At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_extras_at",
+      "fieldtype": "Datetime",
+      "label": "Last Extras At",
+      "read_only": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1,
+      "create": 1,
+      "write": 1
+    },
+    {
+      "role": "System Manager",
+      "permlevel": 1,
+      "read": 1,
+      "write": 1
+    }
+  ],
+  "actions": [],
+  "links": []
+}

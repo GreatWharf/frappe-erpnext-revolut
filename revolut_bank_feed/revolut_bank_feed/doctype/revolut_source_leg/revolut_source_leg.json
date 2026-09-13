@@ -1,0 +1,123 @@
+{
+  "doctype": "DocType",
+  "name": "Revolut Source Leg",
+  "module": "Revolut Bank Feed",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "hash",
+  "allow_rename": 0,
+  "engine": "InnoDB",
+  "track_changes": 0,
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "field_order": [
+    "source_transaction",
+    "company",
+    "account_map",
+    "transaction_id",
+    "leg_id",
+    "currency",
+    "bank_transaction",
+    "fingerprint",
+    "revision",
+    "active",
+    "reported_fee"
+  ],
+  "fields": [
+    {
+      "fieldname": "source_transaction",
+      "fieldtype": "Link",
+      "label": "Source Transaction",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Revolut Source Transaction",
+      "search_index": 1
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Company",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "account_map",
+      "fieldtype": "Link",
+      "label": "Account Map",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Revolut Account Map"
+    },
+    {
+      "fieldname": "transaction_id",
+      "fieldtype": "Data",
+      "label": "Transaction Id",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "leg_id",
+      "fieldtype": "Data",
+      "label": "Leg Id",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "currency",
+      "fieldtype": "Link",
+      "label": "Currency",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Currency"
+    },
+    {
+      "fieldname": "bank_transaction",
+      "fieldtype": "Link",
+      "label": "Bank Transaction",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Bank Transaction",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "fingerprint",
+      "fieldtype": "Data",
+      "label": "Fingerprint",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "revision",
+      "fieldtype": "Int",
+      "label": "Revision",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "active",
+      "fieldtype": "Check",
+      "label": "Active",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "reported_fee",
+      "fieldtype": "Data",
+      "label": "Reported Fee",
+      "read_only": 1,
+      "no_copy": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "actions": [],
+  "links": []
+}

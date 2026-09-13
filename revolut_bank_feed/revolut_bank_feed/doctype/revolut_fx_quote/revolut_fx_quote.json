@@ -1,0 +1,171 @@
+{
+  "doctype": "DocType",
+  "name": "Revolut FX Quote",
+  "module": "Revolut Bank Feed",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "field:record_key",
+  "engine": "InnoDB",
+  "allow_rename": 0,
+  "field_order": [
+    "record_key",
+    "connection",
+    "company",
+    "remote_id",
+    "display_name",
+    "upstream_state",
+    "last_seen_at",
+    "fingerprint",
+    "from_currency",
+    "to_currency",
+    "exchange_rate",
+    "rate_date",
+    "fee_amount",
+    "fee_currency",
+    "currency_exchange",
+    "data"
+  ],
+  "fields": [
+    {
+      "fieldname": "record_key",
+      "fieldtype": "Data",
+      "label": "Record Key",
+      "read_only": 1,
+      "no_copy": 1,
+      "unique": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "connection",
+      "fieldtype": "Link",
+      "label": "Connection",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Revolut Connection",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Company",
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "remote_id",
+      "fieldtype": "Data",
+      "label": "Remote Id",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "display_name",
+      "fieldtype": "Data",
+      "label": "Display Name",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "upstream_state",
+      "fieldtype": "Data",
+      "label": "Upstream State",
+      "read_only": 1,
+      "no_copy": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "last_seen_at",
+      "fieldtype": "Datetime",
+      "label": "Last Seen At",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "fingerprint",
+      "fieldtype": "Data",
+      "label": "Fingerprint",
+      "read_only": 1,
+      "no_copy": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "from_currency",
+      "fieldtype": "Link",
+      "label": "From Currency",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Currency",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "to_currency",
+      "fieldtype": "Link",
+      "label": "To Currency",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Currency",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "exchange_rate",
+      "fieldtype": "Float",
+      "label": "Exchange Rate",
+      "read_only": 1,
+      "no_copy": 1,
+      "precision": "9",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "rate_date",
+      "fieldtype": "Datetime",
+      "label": "Quote Timestamp (UTC)",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "fee_amount",
+      "fieldtype": "Currency",
+      "label": "Fee Amount",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "fee_currency"
+    },
+    {
+      "fieldname": "fee_currency",
+      "fieldtype": "Data",
+      "label": "Fee Currency",
+      "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "currency_exchange",
+      "fieldtype": "Link",
+      "label": "Currency Exchange",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "Currency Exchange"
+    },
+    {
+      "fieldname": "data",
+      "fieldtype": "Code",
+      "label": "Data",
+      "read_only": 1,
+      "no_copy": 1,
+      "options": "JSON"
+    }
+  ],
+  "title_field": "display_name",
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}
