@@ -118,10 +118,19 @@ def create_connection(company, environment="Sandbox", historical_from=None):
 def generate_certificate(connection, recover_missing_key=False):
     connection_for_user(connection)
     with connection_lock(connection):
-        doc = frappe.get_doc("Revolut Connection", connection)
+        doc = frappe.get_doc("Revolut Connection", connection, for_update=True)
         recover = bool(cint(recover_missing_key))
-        has_credentials = any(
-            secret(doc.name, field) for field in ("private_key", "access_token", "refresh_token")
+        # Check current credential existence without reading/decrypting secret values.
+        # Password masks cannot distinguish a stored key from an orphaned certificate.
+        has_credentials = bool(
+            frappe.db.sql(
+                """SELECT 1 FROM `__Auth`
+                WHERE `doctype` = %s AND `name` = %s
+                  AND `fieldname` IN ('private_key', 'access_token', 'refresh_token')
+                  AND `encrypted` = 1 AND COALESCE(`password`, '') != ''
+                LIMIT 1 FOR UPDATE""",
+                (doc.doctype, doc.name),
+            )
         )
         if doc.enabled or doc.authorized or has_credentials or (doc.public_certificate and not recover):
             raise FeedError("certificate_already_configured_use_advanced_settings_to_rotate")
@@ -155,7 +164,7 @@ def save_client_id(connection, client_id):
     if not client_id or len(client_id.strip()) > 140 or client_id == "pending-setup":
         raise FeedError("enter_client_id_from_revolut")
     with connection_lock(connection):
-        doc = frappe.get_doc("Revolut Connection", connection)
+        doc = frappe.get_doc("Revolut Connection", connection, for_update=True)
         if doc.enabled or doc.authorized:
             raise FeedError("use_advanced_settings_to_change_authorized_client")
         doc.client_id = client_id.strip()
@@ -268,7 +277,9 @@ def save_mappings(connection, selections, timezone="UTC", skipped_accounts=None)
     # Token refresh may commit during discovery. Acquire the transaction-scoped
     # configuration lock only afterwards, and hold it through the final request commit.
     lock_configuration(connection)
-    doc = frappe.get_doc("Revolut Connection", connection)
+    # Redis serialization alone does not refresh an earlier REPEATABLE READ snapshot.
+    # Current reads must observe configuration committed before this lock was acquired.
+    doc = frappe.get_doc("Revolut Connection", connection, for_update=True)
     if doc.enabled:
         raise FeedError("pause_connection_before_mapping")
     known = {(a["id"], a["currency"]) for a in accounts}
@@ -287,6 +298,7 @@ def save_mappings(connection, selections, timezone="UTC", skipped_accounts=None)
             {"connection": connection, "account_id": pair[0], "currency": pair[1]},
             ["name", "bank_account"],
             as_dict=True,
+            for_update=True,
         )
     skipped = {
         (row["account_id"], row["currency"]) for row in json.loads(doc.get("skipped_accounts") or "[]")
@@ -331,8 +343,8 @@ def activate(connection):
     connection_for_user(connection)
     # Endpoint changes enabled state only. Configuration remains untouched.
     with connection_lock(connection):
-        doc = frappe.get_doc("Revolut Connection", connection)
-        if not doc.authorized or not any(row.enabled for row in get_maps(doc).values()):
+        doc = frappe.get_doc("Revolut Connection", connection, for_update=True)
+        if not doc.authorized or not any(row.enabled for row in get_maps(doc, for_update=True).values()):
             raise FeedError("finish_authorization_and_account_mapping_first")
         frappe.db.set_value(doc.doctype, doc.name, "enabled", 1)
         frappe.db.commit()

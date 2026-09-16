@@ -104,8 +104,11 @@ def test_bench_tests_use_the_available_frappe_test_base(monkeypatch, major):
     try:
         suite = importlib.import_module(name)
         assert issubclass(suite.TestBankFeedIntegration, base)
-        dependencies = suite.test_dependencies if major == 15 else suite.EXTRA_TEST_RECORD_DEPENDENCIES
-        assert dependencies == ["Company"]
+        # Company is initialized explicitly through ERPNext's normal setup stages,
+        # not through Frappe's recursive test-record dependency graph.
+        assert not getattr(suite, "test_dependencies", [])
+        assert not getattr(suite, "EXTRA_TEST_RECORD_DEPENDENCIES", [])
+        assert suite.TestBankFeedIntegration.company == "_Test Revolut Feed"
     finally:
         sys.modules.pop(name, None)
 

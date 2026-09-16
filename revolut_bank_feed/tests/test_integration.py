@@ -7,31 +7,38 @@ import frappe
 
 from revolut_bank_feed.core import FeedError, identity
 from revolut_bank_feed.importer import get_maps, ingest
+from revolut_bank_feed.tests import setup_test_company
 
 try:
     from frappe.tests import IntegrationTestCase
 except ImportError:
     from frappe.tests.utils import FrappeTestCase as IntegrationTestCase
 
-# The two runners use different names for the same test-record dependencies.
-EXTRA_TEST_RECORD_DEPENDENCIES = ["Company"]
-test_dependencies = EXTRA_TEST_RECORD_DEPENDENCIES
-
 
 class TestBankFeedIntegration(IntegrationTestCase):
+    company = "_Test Revolut Feed"
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        frappe.set_user("Administrator")
+        setup_test_company(cls.company, "TRF")
+
     def setUp(self):
         super().setUp()
+        # Also runs when fixture creation itself fails; releases transaction locks.
+        self.addCleanup(frappe.db.rollback)
         frappe.set_user("Administrator")
         suffix = uuid4().hex[:10]
-        self.currency = frappe.get_value("Company", "_Test Company", "default_currency")
+        self.currency = frappe.get_value("Company", self.company, "default_currency")
         parent = frappe.get_value(
-            "Account", {"company": "_Test Company", "is_group": 1, "root_type": "Asset"}, "name"
+            "Account", {"company": self.company, "is_group": 1, "root_type": "Asset"}, "name"
         )
         account = frappe.get_doc(
             {
                 "doctype": "Account",
                 "account_name": "Feed " + suffix,
-                "company": "_Test Company",
+                "company": self.company,
                 "parent_account": parent,
                 "is_group": 0,
                 "account_type": "Bank",
@@ -45,7 +52,7 @@ class TestBankFeedIntegration(IntegrationTestCase):
                 "account_name": "Feed " + suffix,
                 "bank": bank.name,
                 "account": account.name,
-                "company": "_Test Company",
+                "company": self.company,
                 "is_company_account": 1,
             }
         ).insert()
@@ -53,7 +60,7 @@ class TestBankFeedIntegration(IntegrationTestCase):
             {
                 "doctype": "Revolut Connection",
                 "connection_name": "Test " + suffix,
-                "company": "_Test Company",
+                "company": self.company,
                 "environment": "Sandbox",
                 "client_id": "synthetic-client",
                 "redirect_uri": "https://example.test/consent",

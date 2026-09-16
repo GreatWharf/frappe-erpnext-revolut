@@ -13,7 +13,7 @@ def main():
             tail.append(line)
         status = run.wait()
     if status:
-        message = "".join(tail).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        message = "".join(tail)[-3500:].replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
         print(f"::error::{message}")
     return status
 

@@ -25,9 +25,11 @@ def setup_api(monkeypatch):
         issuer="erp.example.test",
     )
     doc.get = lambda field: getattr(doc, field, None)
-    fake.get_doc = lambda *a: doc
+    fake.get_doc = lambda *a, **kw: doc
     writes = []
-    fake.db = SimpleNamespace(set_value=lambda *a, **kw: writes.append(a), commit=lambda: None)
+    fake.db = SimpleNamespace(
+        set_value=lambda *a, **kw: writes.append(a), commit=lambda: None, sql=lambda *a, **kw: []
+    )
     utils = ModuleType("frappe.utils")
     utils.cint = lambda v: int(v or 0)
     utils.get_url = lambda p: "https://erp.example.test" + p
@@ -44,7 +46,7 @@ def setup_api(monkeypatch):
     auth.exchange = lambda *a: None
     auth.get_client = lambda *a: None
     importer = ModuleType("revolut_bank_feed.importer")
-    importer.get_maps = lambda d: {}
+    importer.get_maps = lambda d, **kw: {}
     sync = ModuleType("revolut_bank_feed.sync")
     sync.enqueue_connection = lambda c: None
     for name, mod in [
@@ -88,7 +90,7 @@ def test_certificate_returns_only_public_material(setup_api):
 
 def test_certificate_does_not_replace_manual_key(setup_api, monkeypatch):
     mod, _, writes = setup_api
-    monkeypatch.setattr(mod, "secret", lambda *a: "existing-key")
+    monkeypatch.setattr(mod.frappe.db, "sql", lambda *a, **kw: [(1,)])
     with pytest.raises(FeedError, match="certificate_already_configured"):
         mod.generate_certificate("test")
     assert not writes
@@ -131,9 +133,87 @@ def test_recovery_refuses_active_connection(setup_api, field):
 def test_recovery_refuses_existing_secrets(setup_api, monkeypatch):
     mod, doc, writes = setup_api
     doc.public_certificate = "old-public-certificate"
-    monkeypatch.setattr(mod, "secret", lambda *a: "existing-secret")
+    monkeypatch.setattr(mod.frappe.db, "sql", lambda *a, **kw: [(1,)])
     with pytest.raises(FeedError):
         mod.generate_certificate("test", recover_missing_key=1)
+    assert not writes
+
+
+@pytest.mark.parametrize("recover", [False, True])
+def test_certificate_detects_concurrently_saved_credentials_without_decrypting(
+    setup_api, monkeypatch, recover
+):
+    mod, doc, writes = setup_api
+    doc.public_certificate = "old-public-certificate" if recover else None
+    reads = []
+
+    def sql(query, values):
+        reads.append(query)
+        assert "SELECT 1" in query
+        assert "`__Auth`" in query
+        assert values == ("Revolut Connection", "test")
+        assert all(field in query for field in ("private_key", "access_token", "refresh_token"))
+        assert "`encrypted` = 1" in query
+        return [(1,)] if "FOR UPDATE" in query else []
+
+    monkeypatch.setattr(mod.frappe.db, "sql", sql)
+    # The old snapshot's secret() would return None; the guard must not use it.
+    with pytest.raises(FeedError, match="certificate_already_configured"):
+        mod.generate_certificate("test", recover_missing_key=recover)
+    assert len(reads) == 1
+    assert not writes
+
+
+def test_certificate_existence_check_never_decrypts_credentials(setup_api, monkeypatch):
+    mod, _, _ = setup_api
+    monkeypatch.setattr(mod, "secret", lambda *a: pytest.fail("Existence guard must not decrypt credentials"))
+    mod.generate_certificate("test")
+
+
+@pytest.mark.parametrize("field", ["enabled", "authorized", "public_certificate"])
+def test_certificate_observes_configuration_committed_before_lock(setup_api, monkeypatch, field):
+    mod, doc, writes = setup_api
+    fresh = SimpleNamespace(**vars(doc))
+    setattr(fresh, field, 1)
+    monkeypatch.setattr(mod.frappe, "get_doc", lambda *args, for_update=False: fresh if for_update else doc)
+    with pytest.raises(FeedError, match="certificate_already_configured"):
+        mod.generate_certificate("test")
+    assert not writes
+
+
+@pytest.mark.parametrize("field", ["enabled", "authorized"])
+def test_client_id_observes_configuration_committed_before_lock(setup_api, monkeypatch, field):
+    mod, doc, writes = setup_api
+    doc.save = lambda: writes.append("save")
+    mod.frappe.flags = SimpleNamespace()
+    fresh = SimpleNamespace(**vars(doc))
+    setattr(fresh, field, 1)
+    monkeypatch.setattr(mod.frappe, "get_doc", lambda *args, for_update=False: fresh if for_update else doc)
+    with pytest.raises(FeedError, match="use_advanced_settings_to_change_authorized_client"):
+        mod.save_client_id("test", "new-client")
+    assert not writes
+
+
+def test_activate_observes_authorization_committed_before_lock(setup_api, monkeypatch):
+    mod, doc, writes = setup_api
+    fresh = SimpleNamespace(**vars(doc))
+    fresh.authorized = 1
+    monkeypatch.setattr(mod.frappe, "get_doc", lambda *args, for_update=False: fresh if for_update else doc)
+    monkeypatch.setattr(mod, "get_maps", lambda *args, **kwargs: {"map": SimpleNamespace(enabled=1)})
+    assert mod.activate("test") == {"queued": True}
+    assert writes == [("Revolut Connection", "test", "enabled", 1)]
+
+
+def test_activate_rejects_mapping_disabled_after_request_snapshot(setup_api, monkeypatch):
+    mod, doc, writes = setup_api
+    doc.authorized = 1
+    monkeypatch.setattr(
+        mod,
+        "get_maps",
+        lambda connection, *, for_update=False: {"map": SimpleNamespace(enabled=not for_update)},
+    )
+    with pytest.raises(FeedError, match="finish_authorization_and_account_mapping_first"):
+        mod.activate("test")
     assert not writes
 
 
@@ -169,7 +249,9 @@ def test_save_mappings_allows_selecting_only_known_accounts(setup_api, monkeypat
     monkeypatch.setattr(
         mod.frappe,
         "get_doc",
-        lambda data, name=None: doc if name else SimpleNamespace(insert=lambda: inserted.append(data)),
+        lambda data, name=None, **kwargs: (
+            doc if name else SimpleNamespace(insert=lambda: inserted.append(data))
+        ),
     )
     result = mod.save_mappings("test", [dict(account_id="known", currency="GBP", bank_account="Main")], "UTC")
     assert result == {"saved": 1}
@@ -186,7 +268,9 @@ def mapping_api(setup_api, monkeypatch):
     monkeypatch.setattr(
         mod.frappe,
         "get_doc",
-        lambda data, name=None: doc if name else SimpleNamespace(insert=lambda: inserted.append(data)),
+        lambda data, name=None, **kwargs: (
+            doc if name else SimpleNamespace(insert=lambda: inserted.append(data))
+        ),
     )
     return mod, doc, writes, inserted
 
@@ -268,10 +352,11 @@ def test_mapping_configuration_lock_follows_discovery_and_rechecks_enabled(mappi
     fresh = SimpleNamespace(**vars(doc))
     fresh.enabled = 1  # Activated by another request after the initial permission check.
 
-    def get_doc(data, name=None):
+    def get_doc(data, name=None, *, for_update=False):
         events.append("reload")
         assert events == ["discover", "lock", "reload"]
-        return fresh
+        # Ordinary reads retain the request's pre-lock REPEATABLE READ snapshot.
+        return fresh if for_update else doc
 
     monkeypatch.setattr(mod.frappe, "get_doc", get_doc)
     with pytest.raises(FeedError, match="pause_connection_before_mapping"):
@@ -283,16 +368,49 @@ def test_mapping_configuration_lock_follows_discovery_and_rechecks_enabled(mappi
 
 def test_mapping_skip_merge_uses_fresh_configuration_inside_lock(mapping_api, monkeypatch):
     mod, doc, writes, _ = mapping_api
-    old_get_doc = mod.frappe.get_doc
     fresh = SimpleNamespace(**vars(doc))
     fresh.skipped_accounts = json.dumps([dict(account_id="concurrently-skipped", currency="EUR")])
     fresh.get = lambda key: getattr(fresh, key, None)
-    monkeypatch.setattr(mod.frappe, "get_doc", lambda data, name=None: fresh if name else old_get_doc(data))
+    monkeypatch.setattr(
+        mod.frappe,
+        "get_doc",
+        lambda data, name=None, *, for_update=False: fresh if for_update else doc,
+    )
     mod.save_mappings("test", [], skipped_accounts=[dict(account_id="known", currency="GBP")])
     assert saved_skips(writes) == [
         dict(account_id="concurrently-skipped", currency="EUR"),
         dict(account_id="known", currency="GBP"),
     ]
+
+
+@pytest.mark.parametrize("action", ["skip", "reuse", "replace"])
+def test_mapping_lookup_observes_mapping_committed_after_request_snapshot(mapping_api, monkeypatch, action):
+    mod, _, writes, inserted = mapping_api
+    locked = []
+    monkeypatch.setattr(mod, "lock_configuration", locked.append)
+
+    def get_value(doctype, filters, fields, *, as_dict=False, for_update=False):
+        assert locked == ["test"]
+        assert doctype == "Revolut Account Map"
+        assert filters == {"connection": "test", "account_id": "known", "currency": "GBP"}
+        assert fields == ["name", "bank_account"]
+        assert as_dict
+        # Another request inserted this map after the initial permission read.
+        return SimpleNamespace(name="concurrent-map", bank_account="Main") if for_update else None
+
+    monkeypatch.setattr(mod.frappe.db, "get_value", get_value)
+    pair = dict(account_id="known", currency="GBP")
+    if action == "skip":
+        with pytest.raises(FeedError, match="existing_mapping_cannot_be_skipped"):
+            mod.save_mappings("test", [], skipped_accounts=[pair])
+        assert not writes
+    elif action == "replace":
+        with pytest.raises(FeedError, match="existing_mapping_is_immutable"):
+            mod.save_mappings("test", [dict(pair, bank_account="Other")])
+        assert not writes
+    else:
+        assert mod.save_mappings("test", [dict(pair, bank_account="Main")]) == {"saved": 1}
+    assert not inserted
 
 
 def test_skip_state_is_read_only_hidden_and_not_copied():

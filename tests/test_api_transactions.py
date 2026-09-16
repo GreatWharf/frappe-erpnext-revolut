@@ -30,7 +30,7 @@ def api_transactions(monkeypatch):
         transaction_id="transaction",
         check_permission=lambda *a: None,
     )
-    fake.get_doc = lambda doctype, name: connection if doctype == "Revolut Connection" else source
+    fake.get_doc = lambda doctype, name, **kw: connection if doctype == "Revolut Connection" else source
     fake.db = SimpleNamespace(
         set_value=lambda *a, **kw: events.append("write"),
         commit=lambda: events.append("commit"),
@@ -95,6 +95,30 @@ def test_private_key_is_committed_before_unlock(api_transactions, monkeypatch):
     module.set_private_key("connection", "dGVzdA==")
     assert events == ["lock", "write", "commit", "unlock"]
     assert module.frappe.flags.revolut_configuration_locked is False
+
+
+def test_backfill_checks_current_enabled_state_after_lock(api_transactions, monkeypatch):
+    module, events, stale = api_transactions
+    current = SimpleNamespace(**{**vars(stale), "enabled": 0})
+    monkeypatch.setattr(module.frappe, "get_doc", lambda *a, **kw: current if kw.get("for_update") else stale)
+    with pytest.raises(ValueError, match="enable_connection_first"):
+        module.start_backfill("connection", "2026-01-01", "2026-01-02")
+    assert "write" not in events
+
+
+def test_key_update_checks_current_enabled_state_after_lock(api_transactions, monkeypatch):
+    module, events, stale = api_transactions
+    stale.enabled = 0
+    stale.save = lambda: events.append("write")
+    current = SimpleNamespace(**{**vars(stale), "enabled": 1})
+    monkeypatch.setattr(module.frappe, "get_doc", lambda *a, **kw: current if kw.get("for_update") else stale)
+    monkeypatch.setattr(module, "RSAPrivateKey", SimpleNamespace)
+    monkeypatch.setattr(
+        module.serialization, "load_pem_private_key", lambda *a, **kw: SimpleNamespace(key_size=2048)
+    )
+    with pytest.raises(ValueError, match="disable_connection_before_key_change"):
+        module.set_private_key("connection", "dGVzdA==")
+    assert "write" not in events
 
 
 def test_review_is_committed_before_unlock(api_transactions):

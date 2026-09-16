@@ -14,11 +14,23 @@ from revolut_bank_feed.core import FeedError
 
 
 class Attr(dict):
-    __getattr__ = dict.get
     __setattr__ = dict.__setitem__
+
+    def __getattr__(self, key):
+        if key.startswith("__") and key.endswith("__"):
+            raise AttributeError(key)
+        return self.get(key)
 
     def as_dict(self):
         return dict(self)
+
+
+def test_attr_boundary_does_not_invent_copy_protocol_methods():
+    row = Attr(value=1)
+    with pytest.raises(AttributeError):
+        getattr(row, "__missing_copy_protocol__")
+    assert copy.deepcopy(row) == row
+    assert row.optional_field is None
 
 
 class Store:

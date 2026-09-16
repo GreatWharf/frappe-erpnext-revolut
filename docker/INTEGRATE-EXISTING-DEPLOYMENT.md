@@ -14,7 +14,7 @@ There is no need to manually enter the container and run `install-app`. The code
 revolut_bank_feed.deployment.ensure_installed
 ```
 
-It uses Frappe's installer only if the app is missing, requires ERPNext v16 and checks that the image exposes the app through `apps.txt`. It is not a public API endpoint and never creates a new site. Already-installed sites return successfully, allowing normal migrations to handle upgrades.
+It uses Frappe's installer only if the app is missing, requires matching Frappe/ERPNext v15 or v16 and checks that the image exposes the app through `apps.txt`. This Docker example remains v16-specific. It is not a public API endpoint and never creates a new site. Already-installed sites return successfully, allowing normal migrations to handle upgrades.
 
 `docker/deploy-site.sh` is a ready integration fragment for the deployment initializer. It selects only `REVOLUT_SITE`, invokes the helper and then migration. If your deployment already runs migration immediately afterwards, set `REVOLUT_RUN_MIGRATE=0`. Set `REVOLUT_ENABLE_SCHEDULER=1` only when this initializer should enable the site's scheduler; by default it preserves that setting.
 
@@ -35,4 +35,4 @@ Redact passwords, access tokens and private keys. Keep variable names and servic
 
 Open **`/desk/revolut-setup`** and follow the guided setup. The v16 app icon is also registered for System Managers. The scheduler and a worker consuming `long` are required. Credentials and account mappings stay in the site's encrypted database across container rebuilds.
 
-The code targets Python 3.14.x and Frappe/ERPNext v16. Reuse compatible runtime/release choices from your existing v16 image; do not upgrade the entire stack just to follow a generic example. The supplied code has local tests and source-level compatibility checks; a live site migration and Docker build still need validation against your deployment.
+This Docker example targets Python 3.14.x and Frappe/ERPNext v16; see [compatibility](../docs/v16-compatibility.md) for the separate v15 runtime requirements. Reuse compatible runtime/release choices from your existing v16 image; do not upgrade the entire stack just to follow a generic example. The supplied code has local tests and source-level compatibility checks; a live site migration and Docker build still need validation against your deployment.

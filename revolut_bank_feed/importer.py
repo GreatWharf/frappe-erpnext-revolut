@@ -45,12 +45,20 @@ def bank_matches(bank, row):
     )
 
 
-def get_maps(connection):
+def get_maps(connection, *, for_update=False):
     result = {}
-    for row in frappe.get_all("Revolut Account Map", filters={"connection": connection.name}, fields=["*"]):
+    filters = {"connection": connection.name}
+    # Activation needs current reads; v15 get_all does not accept for_update.
+    rows = (
+        frappe.db.get_values("Revolut Account Map", filters, "*", as_dict=True, for_update=True)
+        if for_update
+        else frappe.get_all("Revolut Account Map", filters=filters, fields=["*"])
+    )
+    read_options = {"for_update": True} if for_update else {}
+    for row in rows:
         if row.enabled:
-            bank = frappe.get_doc("Bank Account", row.bank_account)
-            ledger = frappe.get_doc("Account", bank.account)
+            bank = frappe.get_doc("Bank Account", row.bank_account, **read_options)
+            ledger = frappe.get_doc("Account", bank.account, **read_options)
             validate_mapping(connection.company, row, bank.as_dict(), ledger.as_dict())
         result[(row.account_id, row.currency)] = row
     return result

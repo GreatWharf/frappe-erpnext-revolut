@@ -2,7 +2,7 @@
 
 ## Local checks — 16 September 2026
 
-The release candidate passed **164 offline Python tests** on Python 3.14, the Node Desk behavior checks, Ruff lint/format, and wheel/source builds. Both distribution archives were checked for **78 runtime source/asset files**, including the setup PNG logos. No production credentials or financial data were used.
+The release candidate passed **187 offline Python tests** on Python 3.14, the Node Desk behavior checks, Ruff lint/format, and wheel/source builds. Both distribution archives were checked for **78 runtime source/asset files**, including the setup PNG logos. No production credentials or financial data were used.
 
 The new regressions cover explicit skips in mixed-account FX/transfers, unknown-account review, skipped-account persistence and activation races, early-v15 reference field limits, matching v15/v16 gates, version-aware navigation, configuration-lock lifetime, and API commit-before-unlock ordering. Existing tests cover Decimal amounts, duplicate imports, source changes, credentials, webhooks, historical windows, and optional expense/receipt/FX imports.
 

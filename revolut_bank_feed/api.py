@@ -55,7 +55,7 @@ def set_private_key(connection, encoded_key):
     if not isinstance(key, RSAPrivateKey) or key.key_size < 2048:
         raise FeedError("rsa_key_at_least_2048_bits_required")
     with connection_lock(connection):
-        doc = frappe.get_doc("Revolut Connection", connection)
+        doc = frappe.get_doc("Revolut Connection", connection, for_update=True)
         if doc.enabled:
             raise FeedError("disable_connection_before_key_change")
         doc.private_key = encoded_key
@@ -110,7 +110,7 @@ def start_backfill(connection, from_date, through_date):
     if start >= end:
         raise FeedError("invalid_backfill_range")
     with connection_lock(connection):
-        doc = frappe.get_doc("Revolut Connection", connection)
+        doc = frappe.get_doc("Revolut Connection", connection, for_update=True)
         if not doc.enabled:
             raise FeedError("enable_connection_first")
         if doc.backfill_next:
