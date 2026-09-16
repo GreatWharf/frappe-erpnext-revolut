@@ -1,91 +1,68 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/integration-dark.svg" />
-    <img src="docs/images/integration-light.svg" alt="ERPNext ↔ Revolut Business" width="480" />
+    <img src="docs/images/integration-light.svg" alt="ERPNext and Revolut Business" width="480" />
   </picture>
 </p>
 
 # Revolut Bank Feed for ERPNext
 
-**Unofficial · Read-only · ERPNext v16 · [MIT License](LICENSE)**
+**Unofficial · Read-only · ERPNext v16 · MIT licensed**
 
-- Import Revolut Business transactions into ERPNext.
-- Reconcile them using ERPNext’s standard Bank Reconciliation.
-- Built by Great Wharf for internal use and shared publicly.
-- Independent project. Not affiliated with or endorsed by Revolut or Frappe.
-- **Release candidate:** validate on staging before using live accounts.
+Revolut Bank Feed brings your Revolut Business accounts into ERPNext so you can see transactions, check balances, handle foreign-currency activity, and reconcile your books with less manual work. It was built for internal use at Great Wharf and is shared as an independent community app. It is not affiliated with Revolut or Frappe.
 
-## Features
+## What you can do
 
-- Browser setup with certificate generation and Revolut authorization.
-- Match Revolut accounts to ERPNext Bank Accounts by currency.
-- Automatic sync every 15 minutes.
-- Sync now, pause, and import older transactions.
-- View sync logs and transactions needing review.
-- Optional expenses, receipts, balances, and FX data.
-- No payment initiation or automatic accounting vouchers.
+- Connect a Revolut Business account through a guided setup.
+- Bring in new transactions automatically every 15 minutes.
+- Import older transactions when you need them.
+- Match Revolut accounts to your ERPNext Bank Accounts.
+- See balances across multiple currencies.
+- Review exchange rates, conversions, fees, and FX details where Revolut provides them.
+- Import available receipts and expense information.
+- Review transactions before reconciling them in ERPNext.
+- Keep the connection read-only: ERPNext cannot make payments through this app.
 
-## Install with Docker
+## What you need
 
-1. Add this entry to your existing image’s app list:
+- Frappe and ERPNext v16.
+- A Revolut Business Grow plan or higher.
+- Access to your Revolut Business settings and an ERPNext System Manager account.
 
-   ```json
-   {
-     "url": "https://github.com/GreatWharf/erpnext_revolut",
-     "branch": "main"
-   }
-   ```
+## Getting started
 
-2. Rebuild the image, keeping your existing apps.
-3. Back up your site and deploy the image to all Frappe services.
-4. Register the app, install it on the site, and run migration.
-5. Check that the scheduler and `long` worker are running.
+1. Install the app on your ERPNext site.
+2. Open **Revolut Bank Feed** from the ERPNext home screen, or open **Banking → Connect Revolut**.
+3. Follow the short connection guide in ERPNext.
+4. Choose your company and import date.
+5. Select the Revolut accounts you want to use and match them to ERPNext Bank Accounts.
+6. Start the feed, then review the first transactions against your Revolut account.
 
-- [Full Docker instructions](docker/INTEGRATE-EXISTING-DEPLOYMENT.md)
-- [Requirements and compatibility](docs/v16-compatibility.md)
+The app keeps its connection details encrypted on your ERPNext site. Keep your normal database backups and site encryption key safe.
 
-## Connect your account
+## Installing on a self-hosted bench
 
-Requires **Revolut Business Grow or above**. [Revolut API requirements](https://help.revolut.com/business/help/integrating-with-external-apps/revolut-business-api/question-using-revolut-business-api/).
+```sh
+bench get-app https://github.com/GreatWharf/frappe-erpnext-revolut.git
+bench --site YOUR_SITE install-app revolut_bank_feed
+bench --site YOUR_SITE migrate
+bench build --app revolut_bank_feed
+```
 
-1. Open **Revolut Bank Feed** from Home, or **Banking → Connect Revolut**.
-2. Choose your Company, environment, and import start date.
-3. Click **Create certificate**.
-4. In Revolut Business → **Settings → APIs → Business API**, register the public certificate and redirect URL shown.
-5. Paste Revolut’s **Client ID** into the setup screen.
-6. Approve **READ access**, then paste the returned URL into the wizard within two minutes.
-7. Match your bank accounts, check a small import against your statement, and activate the feed.
+Frappe Cloud users can install the app from the Marketplace once it is approved.
 
-- Uses a certificate and OAuth; no API key to paste into Docker.
-- Private keys and tokens are stored encrypted in ERPNext.
-- [Step-by-step setup](docs/browser-setup.md)
+## How syncing works
 
-## Finding your way around
+The app reads data from Revolut and creates standard ERPNext Bank Transactions. It does not send payments, change Revolut account settings, or create accounting vouchers automatically. Check the first import carefully, especially for foreign-currency payments and fees.
 
-- Direct setup route: `/desk/revolut-setup`.
-- **Home → Revolut Bank Feed:** connection, account mappings, and sync logs.
-- **Accounting → Banking → Connect Revolut:** set up or manage the feed.
-- **Banking → Banking app:** ERPNext’s separate reconciliation screen, with a Home link back to Desk.
-- Seeing Bank Accounts does not mean transactions have synced. Finish authorization, map accounts, and start the feed first.
+## Help
 
-## Before going live
-
-- Test installation and authorization on staging.
-- Compare imported amounts, dates, currencies, and fees with a Revolut statement.
-- Keep the database and site encryption key backed up.
-- [Validation checklist](docs/acceptance.md) · [Test report](docs/verification.md)
-
-## More help
-
-- [Documentation home](docs/README.md)
-- [Exchange rates](docs/exchange-rates.md)
-
-- [Data coverage](docs/read-only-coverage.md)
-- [Troubleshooting and upgrades](docs/operations.md)
-- [Security](docs/security.md)
-- [Report an issue](https://github.com/GreatWharf/erpnext_revolut/issues)
+- [Setup guide](docs/browser-setup.md)
+- [Requirements](docs/v16-compatibility.md)
+- [Documentation](docs/README.md)
+- [Troubleshooting](docs/operations.md)
+- [Report an issue](https://github.com/GreatWharf/frappe-erpnext-revolut/issues) — never include credentials or financial data.
 
 ## License
 
-- Code: [MIT](LICENSE).
-- ERPNext and Revolut logos belong to their respective owners. [Logo sources](docs/images/README.md).
+This project is MIT licensed. Revolut and ERPNext names and logos belong to their respective owners. See [logo sources](docs/images/README.md).
