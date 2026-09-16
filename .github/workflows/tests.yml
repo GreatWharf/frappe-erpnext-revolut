@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '24'
       - run: node tests/test_desk_loader.cjs
-      - run: python -m pytest -q
+      - run: python scripts/run_ci.py python -m pytest -q
       - run: ruff check .
       - run: ruff format --check .
       - name: Check Desk JavaScript
