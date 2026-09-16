@@ -1,39 +1,30 @@
 # Exchange rates
 
-[All guides](README.md)
+[Back to Revolut Bank Feed help](README.md)
 
-Exchange-rate quotes are already included as an optional feature. No separate app is needed.
+Revolut FX quotes are optional. They help you review a rate in ERPNext; they do not exchange money or change a bank transaction.
 
-## Turn them on
+## Turn on FX quotes
 
-1. Finish connecting and activate the bank feed.
-2. Open **Connect Revolut → Choose extra data**.
-3. Enable **Daily FX quotes** and save.
-4. Click **Refresh extra data**, then open **FX quotes** after the job finishes.
+1. Open the active connection in **Connect Revolut**.
+2. Choose **Choose extra data**.
+3. Turn on **Daily FX quotes** and save.
+4. Choose **Refresh extra data**, then open **FX quotes** when the job finishes.
 
-## Use a rate in ERPNext
+## Save a quote in ERPNext
 
-1. Open today’s quote and check its currency direction, rate and fee.
-2. Click **Use in Currency Exchange**.
-3. Confirm to create an ERPNext **Currency Exchange** record.
+1. Open today's quote and check the currency direction, rate, and fee.
+2. Choose **Use in Currency Exchange**.
+3. Review the details and confirm.
 
-You need permission to create Currency Exchange records. Saving a rate does not exchange any money.
+The quote is for one unit of the account currency into your Company's base currency. For example, a GBP Company with a EUR account gets a EUR → GBP quote.
 
-## What the quote means
+## Important limits
 
-- Direction: each active Revolut account currency **→ your Company’s base currency**.
-- Amount: a sell quote for **one unit**, with the fee shown separately.
-- Example: for a GBP Company with an active EUR account, the app fetches **EUR → GBP**.
-- Quotes are fetched at most once per 24 hours; manual refresh does not bypass that limit.
-- Only a quote dated **today in UTC** can be saved to Currency Exchange.
+- Quotes are refreshed at most once every 24 hours.
+- Only today's UTC quote can be saved as a Currency Exchange record.
+- ERPNext Currency Exchange records are shared across the site and Companies.
+- Existing rates are not overwritten.
+- A quote is indicative; it is not the historical rate used for a particular payment.
 
-## Before saving
-
-- ERPNext Currency Exchange records apply **site-wide**, across Companies.
-- The app never overwrites an existing rate for the same date and direction.
-- A quote is indicative. It is not the historical rate used on a bank transaction or a guarantee of the price for a larger exchange.
-- Saved rates are not automatically replaced by later quotes.
-
-No quotes? Check that the feed is active, **Daily FX quotes** is enabled, and Revolut has an active account in a currency different from your Company’s base currency. Then check the extra-data status in **Sync logs**.
-
-[Revolut’s exchange-rate guide](https://developer.revolut.com/docs/guides/manage-accounts/exchange-money) · [Data coverage](read-only-coverage.md)
+If no quote appears, check that the feed is active, FX quotes are enabled, and the account currencies differ from the Company's base currency.
