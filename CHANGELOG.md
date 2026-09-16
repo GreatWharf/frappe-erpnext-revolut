@@ -1,3 +1,7 @@
+# 0.5.3 — Marketplace Semgrep Security remediation
+
+- Document both background-job entry points (`sync.run`, `enrichment.run`) with an explanatory comment and a scoped `nosemgrep` annotation for `frappe.set_user("Administrator")`. These run in RQ workers whose session is Guest (Frappe `execute_job` only sets a user when one is passed; the scheduler passes none), so the sync must explicitly adopt the system user to read and write its own DocTypes. No banking logic or schema changes.
+
 # 0.5.2 — Marketplace static-scan remediation
 
 - Build navigation documents (Workspace sidebar, Desktop Icon) from static Python data instead of reading bundled JSON at runtime. No `open()` calls remain in production code paths; fixtures stay on disk and tests assert the builders match them exactly.

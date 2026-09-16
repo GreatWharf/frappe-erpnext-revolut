@@ -438,7 +438,12 @@ def schedule():
 
 
 def run(connection_name):
-    frappe.set_user("Administrator")
+    # Background job entry point: enqueued by schedule() (scheduler process has
+    # session.user=Guest) and by the enrichment API. RQ workers therefore run
+    # this as Guest, which has no document permissions. The enrichment sync must
+    # read/write its own DocTypes, so it explicitly adopts the system user. Scope
+    # is bounded to this job; the user is never persisted back to the caller.
+    frappe.set_user("Administrator")  # nosemgrep: frappe-setuser
     try:
         with connection_lock(connection_name):
             connection = frappe.get_doc(CONNECTION, connection_name)
