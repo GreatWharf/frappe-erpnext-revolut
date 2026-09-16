@@ -1,39 +1,47 @@
-# v16 compatibility and deployment boundary
+# Frappe and ERPNext compatibility
 
-Release 0.4 targets **Frappe 16.x and ERPNext 16.x**, Python **3.14.x** and Node **24+** for assets. Upstream's current installation guide lists MariaDB **11.8** for v16; this connector supports MariaDB-backed sites. These are compatibility targets, not an instruction to change a working database in place. Match the existing supported v16 release/runtime configuration when integrating the app.
+Release **0.5.0** targets matching **Frappe/ERPNext v15 or v16** on **MariaDB**. It does not upgrade your framework, database, or other apps. Mixed major versions, v14 and v17 are rejected rather than accepted without validation.
 
-Release 0.3 remains the v15 package. The 0.4 installer rejects v15, mixed majors and other framework majors. It does not upgrade Frappe, ERPNext, MariaDB or the site's other apps.
+| Stack | Python | Navigation | Integration CI target |
+| --- | --- | --- | --- |
+| Frappe + ERPNext 15.x | 3.10–3.14, subject to your exact framework/dependency versions | `/app/revolut-setup`, app shortcut and System Manager workspace | Current version-15 branches, Python 3.10, Node 20, MariaDB 10.6 |
+| Frappe + ERPNext 16.x | 3.14 | `/desk/revolut-setup`, app icon and workspace sidebar | Current version-16 branches, Python 3.14, Node 24, MariaDB 11.8 |
 
-## Changes made
+Keep your existing supported runtime configuration. The app's Python range is not a recommendation to switch a working v15 site to Python 3.14. CI exercises representative stacks, not every historical patch release or every possible dependency combination; use current patched upstream releases and check the exact tag's workflow results before deployment.
 
-- The guided page and app navigation use `/desk/revolut-setup`. A v16 desktop app hook points System Managers to it and returns an explicit permission boolean. The old `/app` documentation is replaced for current setup paths.
-- The Page script uses its own closure and registers Frappe handlers; it does not depend on global class variables. v16's Page script wrapping is therefore compatible with this structure.
-- DocTypes sort by `creation`, following the v16 index/sorting change. Cursor and pending-work queries retain their explicit ordering.
-- Checked actual v16 Bank Transaction, Bank Account and Currency Exchange schemas. The bank feed continues inserting/submitting standard Bank Transactions; payment/reconciliation links remain empty until accounting acts. v16 adds transaction-rule fields and reconciliation-type metadata; the connector leaves those native features to ERPNext. Its existing rules may act on imported rows according to your site's configuration; this app neither enables those rules nor creates vouchers itself.
-- Document-event guards and controllers do not commit transactions. Worker/API transaction boundaries remain outside the v16 restricted document hooks.
-- Verified the v16 query APIs accept the app's list, pluck, page-length and filter forms; singleton boolean settings use integer conversion. Password encryption, job IDs/deduplication and webhook query-string access retain the inspected interfaces.
-- The bench tests now use `frappe.tests.IntegrationTestCase`, `EXTRA_TEST_RECORD_DEPENDENCIES` and the superclass setup lifecycle.
-- Optional CI/build examples target Python 3.14, Node 24 and MariaDB 11.8. GitHub Actions is not required for a custom Docker deployment.
+## Compatibility measures
 
-## Automatic site initialization
+- Python 3.10-compatible application syntax, with offline CI on Python 3.10, 3.12 and 3.14.
+- Version-aware navigation: v15 uses a normal Workspace and never accesses v16-only Workspace Sidebar or Desktop Layout tables. v16 retains its native home icon/sidebar behavior.
+- Both versions retain encrypted server-side credentials, standard Bank Transactions, and normal ERPNext reconciliation. Importing a Bank Transaction does not itself create a general-ledger voucher.
+- Native Bank Transaction schema snapshots check importer fields against the upstream interfaces. Long reference text is shortened only where the installed field is a length-limited Data field; the full bank source remains in the audit payload.
+- Integration tests use the appropriate Frappe test base and Company fixture mechanism for each major version.
+- Configuration edits hold the connection mutex until transaction completion. Worker/token-refresh locks remain lexical so an intermediate credential commit does not release a running worker's lock.
 
-The source/dependencies/assets go in the **image build**. The site tables and installed-app registration happen in the **deployment initializer**, after the existing database and sites volume are available. `docker/deploy-site.sh` runs a CLI-only helper, installing only if missing and then invoking migration (or deferring that to your existing migration job).
+## Install and upgrade
 
-Frappe v16 rejects normal `get_attr` resolution for an app that is not yet installed. The script uses a fixed explicit import expression through `bench execute` for this first-install case. The site name is a separately quoted shell argument; it is never interpolated as Python code. The helper is not whitelisted or exposed as an HTTP endpoint. It requires an initialized site and Administrator context, checks that ERPNext is already installed, and uses Frappe's standard installer. Exactly one deployment initializer should run per site; this is idempotent execution, not a distributed deployment coordinator.
+On Frappe Cloud, select the compatible app release/branch when it is approved for the Marketplace. A pushed Git tag alone does not publish a Marketplace listing.
 
-The deployment owner must handle backups, maintenance, worker draining, database readiness and success-dependent startup. The script must not be run from every web/worker entrypoint. The exact integration will be tailored to the existing Dockerfile/Compose files instead of replacing them.
+For a self-hosted bench, use the release branch or an immutable release commit through your normal app deployment process:
 
-## Verification limits
+```sh
+bench get-app --branch release/0.5.0 https://github.com/GreatWharf/frappe-erpnext-revolut
+bench --site <site> install-app revolut_bank_feed
+```
 
-Local tests run under Python 3.14.7. Desk scripts are syntax checked with Node 24.19.0. The native banking field snapshot in `tests/fixtures/v16_fields.json` is derived from official version-16 schemas and checks importer fields against that interface. Real Frappe/ERPNext v16 migration, reconciliation, permissions, scheduler, Docker build and Revolut integration remain to be validated on staging. No claim is made that the user's deployment has been changed or tested.
+For an existing installation, back up the database, private files and encryption key, update the app checkout to the release, and run `bench --site <site> migrate`. Rebuild assets/restart services using your deployment's standard procedure. Existing Bank Transactions, mappings, credentials and audit history must be retained. Review newly skipped accounts in setup after migration; older releases did not persist explicit exclusions.
 
-## Official sources
+Docker examples remain **v16 examples**. Do not use a v16 image to upgrade a v15 database as a side effect of adding this app. Image build installs code/dependencies/assets; one deployment initializer performs site installation/migration after the existing database and sites volume are available. The CLI-only `docker/deploy-site.sh` helper is idempotent but is not a distributed deployment coordinator.
 
-- [Frappe v16 migration guide](https://github.com/frappe/frappe/wiki/Migrating-to-version-16).
-- [ERPNext v16 migration guide](https://github.com/frappe/erpnext/wiki/Migration-Guide-to-ERPNext-version-16).
+## Verification boundary
+
+Offline tests and source inspection are not proof of a successful install, live browser behavior, Revolut consent, complete bank history, concurrency under load, or accounting reconciliation on your site. The [verification notes](verification.md), [Actions results](https://github.com/GreatWharf/frappe-erpnext-revolut/actions), and [acceptance checklist](acceptance.md) distinguish those checks. Real-site CI uses synthetic data and no bank credentials.
+
+## Official interfaces checked
+
+- [Frappe v15 runtime](https://github.com/frappe/frappe/blob/version-15/pyproject.toml) and [v16 runtime](https://github.com/frappe/frappe/blob/version-16/pyproject.toml).
+- [ERPNext v15 Bank Transaction](https://github.com/frappe/erpnext/blob/version-15/erpnext/accounts/doctype/bank_transaction/bank_transaction.json) and [v16 Bank Transaction](https://github.com/frappe/erpnext/blob/version-16/erpnext/accounts/doctype/bank_transaction/bank_transaction.json).
 - [Frappe installation requirements](https://docs.frappe.io/framework/user/en/installation).
-- [v16 runtime dependencies](https://github.com/frappe/frappe/blob/version-16/pyproject.toml).
-- [Bank Transaction lifecycle](https://github.com/frappe/erpnext/blob/version-16/erpnext/accounts/doctype/bank_transaction/bank_transaction.py).
-- [Site installer](https://github.com/frappe/frappe/blob/version-16/frappe/installer.py) and [CLI execute implementation](https://github.com/frappe/frappe/blob/version-16/frappe/commands/utils.py).
+- [Frappe v16 migration guide](https://github.com/frappe/frappe/wiki/Migrating-to-version-16).
 
-Sources checked on 2026-09-12. For reproducible deployment, pin compatible release tags/commits from your current stack rather than relying on moving branches.
+Compatibility changes reviewed on 16 September 2026. Pin a tested upstream release/commit in production rather than relying on moving branches.

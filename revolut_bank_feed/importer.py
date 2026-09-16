@@ -125,9 +125,15 @@ def ingest(connection, transaction, maps=None, apply_review=False, review_note=N
         if tx["state"] == "completed":
             if not tx.get("legs"):
                 raise FeedError("completed_transaction_without_legs")
+            # Only deliberate, discovery-verified exclusions may bypass mapping.
+            # Keep every leg in the source payload; new/unknown accounts still need review.
+            skipped = {
+                (row["account_id"], row["currency"])
+                for row in json.loads(connection.get("skipped_accounts") or "[]")
+            }
             for leg in tx["legs"]:
-                mapping = maps.get((leg.get("account_id"), leg.get("currency")))
-                if mapping is None:
+                pair = (leg.get("account_id"), leg.get("currency"))
+                if pair not in maps and pair not in skipped:
                     raise FeedError("unmapped_account_or_currency")
             for mapping in maps.values():
                 if not mapping.enabled:
@@ -231,6 +237,13 @@ def ingest(connection, transaction, maps=None, apply_review=False, review_note=N
                 "effective_bill_rate",
             )
         }
+        # Early v15 uses Data (140 chars); newer schemas use Small Text. Clip only
+        # the display reference, never provenance or the full source audit payload.
+        reference_field = frappe.get_meta("Bank Transaction").get_field("reference_number")
+        if reference_field and reference_field.fieldtype == "Data":
+            bank_data["reference_number"] = bank_data["reference_number"][
+                : int(reference_field.length or 140)
+            ]
         bank_data.update(
             doctype="Bank Transaction",
             naming_series="ACC-BTN-.YYYY.-",

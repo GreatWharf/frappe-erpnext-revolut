@@ -2,6 +2,7 @@
 
 import copy
 import importlib
+import json
 import sys
 from datetime import datetime
 from types import ModuleType, SimpleNamespace
@@ -98,6 +99,7 @@ def importer(monkeypatch):
         ]
 
     fake.get_doc, fake.get_all = get_doc, get_all
+    fake.get_meta = lambda dt: SimpleNamespace(get_field=lambda field: Attr(fieldtype="Small Text", length=0))
     utils = ModuleType("frappe.utils")
     utils.now_datetime = datetime.now
     monkeypatch.setitem(sys.modules, "frappe", fake)
@@ -128,6 +130,32 @@ def test_duplicate_delivery_creates_exactly_one_submitted_bank_transaction(impor
     assert len(banks(store)) == 1
     assert banks(store)[0]["docstatus"] == 1
     assert banks(store)[0]["transaction_id"] == "tx-1"
+
+
+@pytest.mark.parametrize(
+    "fieldtype,length,expected", [("Data", 0, 140), ("Data", 80, 80), ("Small Text", 0, 300)]
+)
+def test_reference_fits_bank_schema_without_truncating_source_or_identity(
+    importer, monkeypatch, fieldtype, length, expected
+):
+    module, store = importer
+    conn, maps = setup_rows()
+    monkeypatch.setattr(
+        module.frappe,
+        "get_meta",
+        lambda dt: SimpleNamespace(get_field=lambda field: Attr(fieldtype=fieldtype, length=length)),
+    )
+    tx = transaction(reference="R" * 300)
+    assert module.ingest(conn, tx, maps) == {"created": 1, "review": 0}
+    bank = banks(store)[0]
+    assert bank["reference_number"] == "R" * expected
+    assert bank["transaction_id"] == tx["id"]
+    expected_identity = module.identity(conn.environment, "acct-1", "GBP", tx["id"], "leg-1")
+    assert bank["custom_revolut_source_key"] == expected_identity
+    assert bank["custom_revolut_entry_key"] == module.identity(expected_identity, 1)
+    source = next(row for (dt, _), row in store.rows.items() if dt == "Revolut Source Transaction")
+    assert json.loads(source["payload"])["reference"] == tx["reference"]
+    assert module.ingest(conn, tx, maps) == {"created": 0, "review": 0}
 
 
 def test_pending_to_completed(importer):
@@ -208,6 +236,74 @@ def test_two_fx_legs_sharing_leg_id_remain_distinct(importer):
     assert module.ingest(conn, tx, maps)["created"] == 2
     assert module.ingest(conn, tx, maps)["created"] == 0
     assert len(banks(store)) == 2
+
+
+@pytest.mark.parametrize("kind,currency", [("exchange", "USD"), ("transfer", "GBP")])
+def test_selected_leg_imports_when_counterpart_is_explicitly_skipped(importer, kind, currency):
+    module, store = importer
+    conn, maps = setup_rows()
+    conn.skipped_accounts = json.dumps([dict(account_id="acct-2", currency=currency)])
+    tx = transaction(type=kind)
+    tx["legs"].append(dict(leg_id="leg-1", account_id="acct-2", amount=12, currency=currency))
+    assert module.ingest(conn, tx, maps) == {"created": 1, "review": 0}
+    assert module.ingest(conn, tx, maps) == {"created": 0, "review": 0}
+    assert [row["bank_account"] for row in banks(store)] == ["Bank GBP"]
+    source = next(row for (dt, _), row in store.rows.items() if dt == "Revolut Source Transaction")
+    assert len(json.loads(source["payload"])["legs"]) == 2  # Keep skipped-leg evidence.
+
+
+def test_all_explicitly_skipped_legs_keep_evidence_without_review_or_bank_rows(importer):
+    module, store = importer
+    conn, _ = setup_rows()
+    conn.skipped_accounts = json.dumps([dict(account_id="acct-1", currency="GBP")])
+    assert module.ingest(conn, transaction(), {}) == {"created": 0, "review": 0}
+    assert not banks(store)
+    assert len([row for (dt, _), row in store.rows.items() if dt == "Revolut Source Transaction"]) == 1
+
+
+@pytest.mark.parametrize("skipped_currency", [None, "EUR"])
+def test_unknown_counterpart_or_unexpected_currency_still_requires_review(importer, skipped_currency):
+    module, store = importer
+    conn, maps = setup_rows()
+    conn.skipped_accounts = json.dumps(
+        [dict(account_id="acct-2", currency=skipped_currency)] if skipped_currency else []
+    )
+    tx = transaction(type="exchange")
+    tx["legs"].append(dict(leg_id="leg-1", account_id="acct-2", amount=12, currency="USD"))
+    assert module.ingest(conn, tx, maps) == {"created": 0, "review": 1}
+    assert not banks(store)
+    source = next(row for (dt, _), row in store.rows.items() if dt == "Revolut Source Transaction")
+    assert source["review_reason"] == "unmapped_account_or_currency"
+
+
+def test_mapping_previously_skipped_account_imports_only_its_missing_leg(importer):
+    module, store = importer
+    conn, maps = setup_rows()
+    conn.skipped_accounts = json.dumps([dict(account_id="acct-2", currency="USD")])
+    tx = transaction(type="exchange")
+    tx["legs"].append(dict(leg_id="leg-1", account_id="acct-2", amount=12, currency="USD"))
+    assert module.ingest(conn, tx, maps) == {"created": 1, "review": 0}
+    maps[("acct-2", "USD")] = Attr(
+        mapping(account_id="acct-2", currency="USD", bank_account="Bank USD"), name="map-2", enabled=1
+    )
+    # An existing mapping takes precedence even if an old skip entry remains.
+    assert module.ingest(conn, tx, maps) == {"created": 1, "review": 0}
+    assert module.ingest(conn, tx, maps) == {"created": 0, "review": 0}
+    assert sorted(row["bank_account"] for row in banks(store)) == ["Bank GBP", "Bank USD"]
+
+
+def test_skipped_counterpart_does_not_bypass_financial_change_review(importer):
+    module, store = importer
+    conn, maps = setup_rows()
+    conn.skipped_accounts = json.dumps([dict(account_id="acct-2", currency="USD")])
+    tx = transaction(type="exchange")
+    tx["legs"].append(dict(leg_id="leg-1", account_id="acct-2", amount=12, currency="USD"))
+    assert module.ingest(conn, tx, maps)["created"] == 1
+    tx["legs"][0]["amount"] = -20
+    tx["updated_at"] = "2026-08-03T00:00:00Z"
+    assert module.ingest(conn, tx, maps) == {"created": 0, "review": 1}
+    assert banks(store)[0]["withdrawal"] == 10.25
+    assert banks(store)[0]["custom_revolut_review_required"] == 1
 
 
 def test_pausing_mapping_never_cancels_historical_rows(importer):

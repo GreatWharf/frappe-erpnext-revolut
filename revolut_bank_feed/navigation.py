@@ -2,7 +2,7 @@ import frappe
 
 
 def has_app_permission():
-    """v16 app navigation hook must return an explicit boolean."""
+    """The v15/v16 apps-screen hook must return an explicit boolean."""
     return "System Manager" in frappe.get_roles()
 
 
@@ -10,7 +10,14 @@ def ensure_navigation():
     """Add entry points after standard navigation sync; preserve existing customizations."""
     import json
 
-    from revolut_bank_feed.navigation_data import merge_home_icon
+    from revolut_bank_feed.navigation_data import merge_home_icon, workspace_document
+
+    if frappe.__version__.split(".")[0] == "15":
+        # v15's legacy Desktop Icon is not the v16 launcher; its Desk uses Workspace.
+        if not frappe.db.exists("Workspace", "Revolut Bank Feed"):
+            frappe.get_doc(workspace_document()).insert(ignore_permissions=True)
+        frappe.cache.delete_key("bootinfo")
+        return
 
     # after_install runs before Frappe's standard navigation sync on a fresh site.
     for kind, doctype in (("workspace_sidebar", "Workspace Sidebar"), ("desktop_icon", "Desktop Icon")):

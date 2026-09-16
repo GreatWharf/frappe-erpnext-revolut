@@ -5,12 +5,14 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import get_url, getdate, today
 
-from revolut_bank_feed.auth import connection_lock
+from revolut_bank_feed.auth import lock_configuration
 
 
 class RevolutConnection(Document):
     def validate(self):
         frappe.only_for("System Manager")
+        if not self.is_new() and not frappe.flags.revolut_configuration_locked:
+            lock_configuration(self.name)
         parsed = urlparse(self.redirect_uri or "")
         if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
             frappe.throw("Redirect URI must be an HTTPS URL without credentials.")
@@ -44,9 +46,6 @@ class RevolutConnection(Document):
             ]
             if old.enabled and any(old.get(key) != self.get(key) for key in writable):
                 frappe.throw("Disable and save the connection before changing configuration.")
-            if not frappe.flags.revolut_configuration_locked:
-                with connection_lock(self.name):
-                    pass
             for key in ("company", "environment"):
                 if old.get(key) != self.get(key):
                     frappe.throw(f"{key} cannot be changed; create a separate connection.")

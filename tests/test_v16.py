@@ -32,13 +32,23 @@ def install_module(monkeypatch):
     sys.modules.pop("revolut_bank_feed.install", None)
 
 
-def test_version_16_is_accepted(install_module):
-    module, _, _ = install_module
+@pytest.mark.parametrize("version", ["15.0.0", "15.99.0", "16.0.0", "16.1.0"])
+def test_matching_supported_versions_are_accepted(install_module, version):
+    module, fake, erp = install_module
+    fake.__version__ = erp.__version__ = version
     module.check_versions()
 
 
+def test_postgres_is_rejected(install_module):
+    module, fake, _ = install_module
+    fake.db.db_type = "postgres"
+    with pytest.raises(ValueError, match="MariaDB"):
+        module.check_versions()
+
+
 @pytest.mark.parametrize(
-    "frappe_version,erp_version", [("15.99.0", "16.0.0"), ("16.0.0", "15.99.0"), ("17.0.0", "17.0.0")]
+    "frappe_version,erp_version",
+    [("15.99.0", "16.0.0"), ("16.0.0", "15.99.0"), ("14.99.0", "14.99.0"), ("17.0.0", "17.0.0")],
 )
 def test_other_major_versions_rejected(install_module, frappe_version, erp_version):
     module, fake, erp = install_module
@@ -48,20 +58,67 @@ def test_other_major_versions_rejected(install_module, frappe_version, erp_versi
         module.check_versions()
 
 
-def test_runtime_and_desk_route_target_v16():
+def test_package_allows_supported_python_and_frappe_versions():
+    try:
+        import tomllib
+    except ModuleNotFoundError:
+        import tomli as tomllib
+
+    project = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
+    assert project["project"]["requires-python"] == ">=3.10,<3.15"
+    assert project["tool"]["ruff"]["target-version"] == "py310"
+    assert project["tool"]["bench"]["frappe-dependencies"]["frappe"] == ">=15.0.0-dev,<17.0.0-dev"
+
+
+def test_application_and_tests_parse_on_python_310():
+    import ast
+
     root = Path(__file__).parents[1]
-    assert 'requires-python = ">=3.14,<3.15"' in (root / "pyproject.toml").read_text()
-    assert "/desk/revolut-setup" in (root / "README.md").read_text()
+    for folder in (root / "revolut_bank_feed", root / "tests"):
+        for source in folder.rglob("*.py"):
+            ast.parse(source.read_text(), filename=str(source), feature_version=(3, 10))
 
 
-def test_import_fields_exist_in_official_v16_bank_schema():
+@pytest.mark.parametrize("major", [15, 16])
+def test_bench_tests_use_the_available_frappe_test_base(monkeypatch, major):
+    fake = ModuleType("frappe")
+    fake.__version__ = f"{major}.0.0"
+    test_module = ModuleType("frappe.tests")
+    utils = ModuleType("frappe.tests.utils")
+    base = type("IntegrationTestCase" if major == 16 else "FrappeTestCase", (), {})
+    if major == 16:
+        test_module.IntegrationTestCase = base
+    else:
+        utils.FrappeTestCase = base
+    importer = ModuleType("revolut_bank_feed.importer")
+    importer.get_maps = importer.ingest = lambda *a, **kw: None
+    for name, module in (
+        ("frappe", fake),
+        ("frappe.tests", test_module),
+        ("frappe.tests.utils", utils),
+        ("revolut_bank_feed.importer", importer),
+    ):
+        monkeypatch.setitem(sys.modules, name, module)
+    name = "revolut_bank_feed.tests.test_integration"
+    monkeypatch.delitem(sys.modules, name, raising=False)
+    try:
+        suite = importlib.import_module(name)
+        assert issubclass(suite.TestBankFeedIntegration, base)
+        dependencies = suite.test_dependencies if major == 15 else suite.EXTRA_TEST_RECORD_DEPENDENCIES
+        assert dependencies == ["Company"]
+    finally:
+        sys.modules.pop(name, None)
+
+
+@pytest.mark.parametrize("major", [15, 16])
+def test_import_fields_exist_in_official_bank_schema(major):
     import json
 
     from test_core import mapping, transaction
 
     from revolut_bank_feed.core import normalize
 
-    snapshot = json.loads((Path(__file__).parent / "fixtures/v16_fields.json").read_text())
+    snapshot = json.loads((Path(__file__).parent / f"fixtures/v{major}_fields.json").read_text())
     row = normalize(transaction(), mapping())[0]
     ignored = {
         "leg_id",

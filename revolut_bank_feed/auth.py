@@ -36,6 +36,35 @@ def connection_lock(name, blocking_timeout=0):
             pass
 
 
+def lock_configuration(name):
+    """Keep configuration changes serialized until their database transaction ends."""
+    held = getattr(frappe.local, "revolut_configuration_locks", None)
+    if held is None:
+        held = frappe.local.revolut_configuration_locks = {}
+    if name in held:
+        return
+    lock = frappe.cache.lock(f"revolut-feed:{frappe.local.site}:{name}", timeout=960, blocking_timeout=0)
+    if not lock.acquire(blocking=False):
+        raise FeedError("connection_busy")
+    held[name] = lock
+
+    def release():
+        if held.get(name) is not lock:
+            return
+        held.pop(name)
+        try:
+            lock.release()
+        except LockError:
+            pass
+
+    try:
+        frappe.db.after_commit.add(release)
+        frappe.db.after_rollback.add(release)
+    except Exception:
+        release()
+        raise
+
+
 def get_client(doc, deadline=None):
     return Client(doc.environment, lambda force=False: access_token(doc.name, force), deadline=deadline)
 

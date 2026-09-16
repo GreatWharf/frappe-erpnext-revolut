@@ -26,7 +26,7 @@ def utc(value):
     else:
         try:
             result = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             raise FeedError("invalid_timestamp") from None
     return result.replace(tzinfo=timezone.utc) if result.tzinfo is None else result.astimezone(timezone.utc)
 
@@ -43,7 +43,7 @@ def money(value):
         if not result.is_finite() or abs(result) > Decimal("999999999999999"):
             raise InvalidOperation
         return result
-    except InvalidOperation, ValueError:
+    except (InvalidOperation, ValueError):
         raise FeedError("invalid_money") from None
 
 

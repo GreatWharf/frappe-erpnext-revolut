@@ -5,7 +5,7 @@ This guide explains how to connect Revolut Business to ERPNext, check your first
 ## Before you start
 
 - You need a Revolut Business **Grow, Scale, or Enterprise** plan. Basic and personal accounts are not supported. [Check Revolut's current requirements](https://help.revolut.com/business/help/integrating-with-external-apps/revolut-business-api/question-using-revolut-business-api/).
-- Your ERPNext site must be running v16.
+- Your ERPNext and Frappe versions must match: v15 or v16, on MariaDB. See [compatibility requirements](v16-compatibility.md).
 - You need an ERPNext **System Manager** account for setup.
 
 ## Choose a guide

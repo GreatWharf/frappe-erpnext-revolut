@@ -17,7 +17,7 @@ def ensure_installed():
     check_versions()
     installed = frappe.get_installed_apps()
     if "erpnext" not in installed:
-        frappe.throw("ERPNext v16 must already be installed on the target site.")
+        frappe.throw("A matching ERPNext v15 or v16 must already be installed on the target site.")
     if "revolut_bank_feed" not in frappe.get_all_apps():
         frappe.throw("The image's apps.txt must include revolut_bank_feed before site initialization.")
     if "revolut_bank_feed" in installed:

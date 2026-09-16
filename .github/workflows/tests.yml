@@ -6,8 +6,9 @@ jobs:
   unit:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python: ['3.14']
+        python: ['3.10', '3.12', '3.14']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,4 +22,13 @@ jobs:
       - run: python -m pytest -q
       - run: ruff check .
       - run: ruff format --check .
-      - run: python -m build
+      - name: Check Desk JavaScript
+        run: find revolut_bank_feed -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Build and verify distributions
+        run: |
+          python -m build
+          python scripts/check_dist.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: revolut-distributions-python-${{ matrix.python }}
+          path: dist/*

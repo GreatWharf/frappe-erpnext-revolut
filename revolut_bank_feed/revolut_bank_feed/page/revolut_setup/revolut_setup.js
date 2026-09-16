@@ -31,6 +31,11 @@ class RevolutSetup {
         .revolut-setup .rb-card h3 {font-size:19px;margin:0 0 10px;}
         .revolut-setup .rb-fields {max-width:520px;margin-top:22px;}
         .revolut-setup .rb-actions {display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;}
+        .revolut-setup .rb-actions .btn {max-width:100%;white-space:normal;}
+        .revolut-setup .rb-tools {border-top:1px solid var(--border-color);padding-top:10px;margin-top:24px;}
+        .revolut-setup .rb-tools summary {color:var(--text-color);font-weight:600;padding:8px 0;}
+        .revolut-setup .rb-tools .rb-actions {margin-top:12px;}
+        .revolut-setup .rb-management {margin-top:24px;padding-bottom:0;}
         .revolut-setup .rb-note {padding:14px 16px;background:var(--subtle-fg);border-radius:8px;margin-top:20px;line-height:1.6;}
         .revolut-setup .rb-error {padding:14px;border:1px solid var(--red-300);border-radius:8px;margin-bottom:16px;}
         .revolut-setup pre {white-space:pre-wrap;word-break:break-all;max-height:180px;overflow:auto;font-size:12px;}
@@ -40,7 +45,7 @@ class RevolutSetup {
         .revolut-setup .rb-table .form-group {margin:0;}
         .revolut-setup .rb-status {display:flex;gap:32px;flex-wrap:wrap;padding:16px 0;}
         .revolut-setup .rb-status strong {display:block;font-size:16px;margin-top:4px;}
-        .revolut-setup button:focus-visible,.revolut-setup a:focus-visible {outline:2px solid var(--primary);outline-offset:3px;}
+        .revolut-setup button:focus-visible,.revolut-setup a:focus-visible,.revolut-setup summary:focus-visible {outline:2px solid var(--primary);outline-offset:3px;}
         .revolut-setup .rb-brand {display:flex;align-items:center;gap:16px;margin-bottom:28px;}
         .revolut-setup .rb-brand img {height:26px;max-width:150px;object-fit:contain;}
         .revolut-setup .rb-brand .rb-revolut {height:22px;}
@@ -220,12 +225,32 @@ class RevolutSetup {
   mappingSelections(selections) {
     return selections.filter(s => s.control.get_value()).map(s => ({account_id: s.account.id, currency: s.account.currency, bank_account: s.control.get_value()}));
   }
+  skippedSelections(selections) {
+    return selections.filter(s => !s.control.get_value()).map(s => ({account_id: s.account.id, currency: s.account.currency}));
+  }
+  confirmAction(message) {
+    return new Promise(resolve => {
+      const dialog = frappe.confirm(__(message), () => resolve(true), () => resolve(false));
+      // Escape / close must release the busy state just like the Cancel button.
+      dialog.$wrapper.one('hidden.bs.modal', () => resolve(false));
+    });
+  }
   async openAccountMappings(doc) {
-    if (doc.enabled) await this.call('pause', {connection: doc.name});
+    if (doc.enabled) {
+      if (!await this.confirmAction('Pause automatic syncing to manage accounts? Existing transactions stay unchanged. Resume the feed when you finish.')) return;
+      await this.call('pause', {connection: doc.name});
+    }
     await this.load();
   }
-  async saveMappingProgress(doc, rows, timezone) {
-    if (rows.length) await this.call('save_mappings', {connection: doc.name, selections: JSON.stringify(rows), timezone});
+  async pauseFeed(doc) {
+    if (!await this.confirmAction('Pause this bank feed? No new transactions will be imported until you resume it. Existing transactions stay unchanged.')) return;
+    await this.call('pause', {connection: doc.name});
+    await this.load();
+  }
+  async saveMappingProgress(doc, rows, timezone, skipped = []) {
+    if (rows.length || skipped.length) await this.call('save_mappings', {
+      connection: doc.name, selections: JSON.stringify(rows), skipped_accounts: JSON.stringify(skipped), timezone,
+    });
   }
   async accounts(doc) {
     this.intro('Choose where transactions go', 'Choose the accounts you recognise. Match each one to an ERPNext Bank Account in the same currency, or skip it for now.');
@@ -259,7 +284,7 @@ class RevolutSetup {
     const actions = $('<div class="rb-actions">').appendTo(this.card);
     this.action(actions, 'Create an ERPNext Bank Account', () => this.newBank(doc));
     this.action(actions, 'Save for later', async () => {
-      await this.saveMappingProgress(doc, this.mappingSelections(selections), timezone.get_value());
+      await this.saveMappingProgress(doc, this.mappingSelections(selections), timezone.get_value(), this.skippedSelections(selections));
       frappe.show_alert(__('Setup saved. Sync stays paused. Return to this connection whenever you are ready to map more accounts.'));
       await this.load();
     });
@@ -267,7 +292,7 @@ class RevolutSetup {
     this.action(actions, 'Save accounts and start sync', async () => {
       const rows = this.mappingSelections(selections);
       if (!rows.length) return frappe.msgprint(__('Select at least one ERPNext Bank Account. You can skip accounts you have not identified.'));
-      await this.saveMappingProgress(doc, rows, timezone.get_value());
+      await this.saveMappingProgress(doc, rows, timezone.get_value(), this.skippedSelections(selections));
       await this.call('activate', {connection: doc.name}); await this.load();
     }, true);
     if (this.data.maps.length) this.action(actions, 'Resume existing feed', async () => {
@@ -298,17 +323,25 @@ class RevolutSetup {
     if (doc.last_error_code) $('<div class="rb-note">').text(`${__('Sync needs attention:')} ${doc.last_error_code}. ${__('Open Sync Logs for details.')}`).appendTo(this.card);
     const actions = $('<div class="rb-actions">').appendTo(this.card);
     this.action(actions, 'Sync now', async () => { await this.call('sync_now', {connection: doc.name}, 'api'); frappe.show_alert(__('Sync queued.')); }, true);
-    this.action(actions, 'Refresh status', () => this.load());
-    this.action(actions, 'Manage accounts (pauses sync)', () => this.openAccountMappings(doc));
     this.action(actions, 'Bank transactions', () => frappe.set_route('List', 'Bank Transaction', {company: doc.company}));
     this.action(actions, 'Review transactions', () => frappe.set_route('List', 'Revolut Source Transaction', {connection: doc.name, needs_review: 1}));
     this.action(actions, 'Sync logs', () => frappe.set_route('List', 'Revolut Sync Log', {connection: doc.name}));
-    this.action(actions, 'Import older transactions', () => {
+    $('<p class="rb-muted">').css('margin-top', '16px').text(`${__('Last successful run:')} ${doc.last_success_at || __('Waiting for the worker')}`).appendTo(this.card);
+
+    const syncOptions = $('<details class="rb-tools">').appendTo(this.card);
+    $('<summary>').text(__('Sync options')).appendTo(syncOptions);
+    const syncActions = $('<div class="rb-actions">').appendTo(syncOptions);
+    this.action(syncActions, 'Refresh status', () => this.load());
+    this.action(syncActions, 'Import older transactions', () => {
       frappe.prompt([{fieldname: 'from_date', fieldtype: 'Date', label: __('From'), reqd: 1, default: doc.historical_from},
         {fieldname: 'through_date', fieldtype: 'Date', label: __('Through'), reqd: 1, default: frappe.datetime.get_today()}],
         async values => { await this.call('start_backfill', {connection: doc.name, ...values}, 'api'); await this.load(); }, __('Historical import'));
     });
-    this.action(actions, 'Choose extra data', () => {
+    const extraData = $('<details class="rb-tools">').appendTo(this.card);
+    $('<summary>').text(__('Extra data')).appendTo(extraData);
+    $('<p class="rb-muted">').text(`${__('Last result:')} ${doc.extras_last_status || __('Hourly refresh pending')} ${doc.extras_error_code || ''}`).appendTo(extraData);
+    const extraActions = $('<div class="rb-actions">').appendTo(extraData);
+    this.action(extraActions, 'Choose extra data', () => {
       const production = doc.environment === 'Production';
       frappe.prompt([
         {fieldname:'sync_fx', fieldtype:'Check', label:__('Daily FX quotes'), default:doc.sync_fx || 0},
@@ -317,12 +350,16 @@ class RevolutSetup {
         {fieldname:'sync_catalogs', fieldtype:'Check', label:__('Categories, tax rates and labels'), default:doc.sync_catalogs || 0}
       ], async values => { await this.call('configure', {connection:doc.name,...values}, 'enrichment_api'); await this.load(); }, __('Read-only imports'));
     });
-    this.action(actions, 'Refresh extra data', async () => { await this.call('sync_now', {connection:doc.name}, 'enrichment_api'); frappe.show_alert(__('Extra data sync queued.')); });
+    this.action(extraActions, 'Refresh extra data', async () => { await this.call('sync_now', {connection:doc.name}, 'enrichment_api'); frappe.show_alert(__('Extra data sync queued.')); });
     [['Accounts and balances','Revolut Account Snapshot'],['Expenses and receipts','Revolut Expense'],
       ['FX quotes','Revolut FX Quote'],['Categories and taxes','Revolut Reference']].forEach(([label,type]) =>
-      this.action(actions,label,() => frappe.set_route('List',type,{connection:doc.name})));
-    $('<p class="rb-muted">').text(`${__('Extra data:')} ${doc.extras_last_status || __('Hourly refresh pending')} ${doc.extras_error_code || ''}`).appendTo(this.card);
-    this.action(actions, 'Pause feed', async () => { await this.call('pause', {connection: doc.name}); await this.load(); });
-    $('<p class="rb-muted">').css('margin-top', '22px').text(`${__('Last successful run:')} ${doc.last_success_at || __('Waiting for the worker')}`).appendTo(this.card);
+      this.action(extraActions,label,() => frappe.set_route('List',type,{connection:doc.name})));
+
+    const management = $('<section class="rb-task rb-management">').appendTo(this.card);
+    $('<h4>').text(__('Manage connection')).appendTo(management);
+    $('<p class="rb-muted">').text(__('Account changes pause syncing. Existing transactions stay available for reconciliation.')).appendTo(management);
+    const managementActions = $('<div class="rb-actions">').appendTo(management);
+    this.action(managementActions, 'Manage accounts', () => this.openAccountMappings(doc));
+    this.action(managementActions, 'Pause feed', () => this.pauseFeed(doc));
   }
 }

@@ -1,46 +1,46 @@
-# Verification report — 2026-09-12
+# Release 0.5.0 verification
 
-## Executed locally
+## Local checks — 16 September 2026
 
-Authoring runtime: Python 3.14.7 and Node 24.19.0 on macOS for the v16 port. Test dependencies were installed in an isolated environment. No production credentials or account data were used.
+The release candidate passed **164 offline Python tests** on Python 3.14, the Node Desk behavior checks, Ruff lint/format, and wheel/source builds. Both distribution archives were checked for **78 runtime source/asset files**, including the setup PNG logos. No production credentials or financial data were used.
 
-| Check | Result |
-| --- | --- |
-| pytest unit/mock suite | **109 passed** |
-| Ruff lint | Passed |
-| Ruff formatting | Passed |
-| Python byte compilation | Passed |
-| JavaScript syntax checks for all Desk scripts | Passed |
-| v16 Page IIFE registration smoke check | Passed |
-| Source distribution and universal Python wheel | Built successfully |
-| Package/DocType/controller/secret-field structure | Checked |
-| Distribution archive contents and CRC | Checked before delivery |
+The new regressions cover explicit skips in mixed-account FX/transfers, unknown-account review, skipped-account persistence and activation races, early-v15 reference field limits, matching v15/v16 gates, version-aware navigation, configuration-lock lifetime, and API commit-before-unlock ordering. Existing tests cover Decimal amounts, duplicate imports, source changes, credentials, webhooks, historical windows, and optional expense/receipt/FX imports.
 
-The browser additions test certificate generation and expiry, strict authorization return URL validation, credential exclusion from browser responses, refusal to overwrite existing private keys and activation prerequisites. JavaScript received syntax checks, but the wizard was not executed in a live Frappe browser.
+Node behavior checks execute the actual page/form scripts against a lightweight Desk boundary: registration, escaped account details, explicit selections, pause confirmation/cancellation, grouped actions, and paused-state visibility. This is not a visual review in a live browser.
 
-The suite covers Decimal money and equal-value scale changes; Company/currency validation; completed/pending/failed/reverted behavior; independent refunds and same-leg-ID FX; fee policies; unique imports and explicit review; preservation of paused accounts; out-of-order evidence; time pagination and ties; page checkpoint/restart recovery; token refresh with omitted/rotated refresh tokens; READ consent; HTTP endpoint restrictions, 401, rate limits and network retry; HMAC, timestamp tolerance, secret rotation, query-string routing, duplicate delivery and durable queue-failure recovery.
+Reproduce from the repository root:
 
-The persistence tests execute the actual importer against an in-memory Frappe boundary. They establish application-rule behavior, but do not prove database locking, actual ERPNext lifecycle, installation, or real-user permission behavior. The source contains five additional integration tests for a real bench; they are outside the 109-test local count.
+```sh
+python -m pip install -e '.[test]'
+python -m pytest -q
+node tests/test_desk_loader.cjs
+ruff check .
+ruff format --check .
+find revolut_bank_feed -name '*.js' -print0 | xargs -0 -n1 node --check
+python -m build
+python scripts/check_dist.py
+```
 
-The 0.3 tests additionally cover shortened routine polling and daily correction cadence, expense-date pagination and saturated ties, recovery from saved expense page checkpoints, idempotent evidence upserts, preservation of accounting links, review flags for changed linked evidence, private receipt deduplication, streamed download size limits, safe endpoint allowlists, catalogue cursors, quote direction and effective bill conversion rates.
+Build into a clean `dist` directory: the archive check intentionally refuses ambiguous multiple-version output.
 
-## Source and review checks
+## Remote compatibility gates
 
-Official Revolut authentication, pagination/state, transaction schema and webhook-signature documents were consulted. The current official Frappe/ERPNext version-16 Bank Transaction source/schema, password storage, job enqueueing and request-body parsing were also inspected. The current official Docker Containerfile/build documentation and Compose service names were checked. References are linked in README.
+The unit workflow runs on Python **3.10, 3.12 and 3.14**. The integration workflow installs current matching **version-15** and **version-16** Frappe/ERPNext branches, installs the connector, migrates, and runs actual ERPNext Bank Transaction lifecycle tests with synthetic data and MariaDB/Redis.
 
-Independent static review identified paused-map handling and numerically equal Decimal fingerprint issues; both were reproduced and fixed with regression tests. A separate compatibility inspection identified Frappe v15's JSON/query-string parsing behavior; the webhook endpoint was corrected and tested. Static review also checked the checkpoint/resume logic. The 0.3 independent review identified receipt-sibling starvation and a stale account-state restoration bug; both were reproduced with regression tests and fixed. These reviews are not a penetration test or a substitute for a live deployment.
+The real-site suite checks submitted/unreconciled rows, idempotency without GL postings, source-change review, provenance protection, disabled-map history, credential preservation, and Redis exclusion during a configuration transaction. Fixture transaction callbacks are simulated where necessary to keep test records rollbackable; this is not a concurrency load test.
 
-## Not executed here
+A configured matrix is not a passed matrix. Inspect [GitHub Actions](https://github.com/GreatWharf/frappe-erpnext-revolut/actions) for the exact release commit/tag before deployment. CI tests representative current branches; it does not establish that every historical v15/v16 patch combination has been exercised.
 
-- Installing/migrating into a real Frappe/ERPNext v16 site.
-- The supplied bench integration tests or GitHub-hosted CI workflows.
-- Building/running the ERPNext Docker image, including the new manual GitHub publishing workflow.
-- Browser interaction tests against a running ERPNext Desk.
-- Real Revolut Sandbox or Production consent, API calls or webhooks.
-- Statement/balance comparison, fee interpretation, real accounting reconciliation, concurrency under load, or restore/uninstall testing.
+## Still requires site/bank acceptance
 
-There was no live bench, Docker engine or Revolut credential set in this workspace. The [acceptance checklist](acceptance.md) and GitHub bench workflow make the remaining deployment verification explicit. Version 0.4.0 is a release candidate pending those checks on the target deployment, not a claim of production certification.
+- Consent and read access with the customer's actual Revolut Business plan.
+- Live browser review, including dark mode, small screens, and the installed Desk theme.
+- Bank-statement comparison, fees and FX interpretation, and a complete accounting reconciliation.
+- Webhook delivery, scheduler/worker operation, concurrent requests under load, and backup/restore on the target deployment.
+- Exact Docker image build and deployment configuration if self-hosted.
 
-## v16 port verification
+No live bench, Docker engine or bank credentials were available locally. Remote CI does not use a live Revolut account. Complete the [acceptance checklist](acceptance.md) and [compatibility requirements](v16-compatibility.md). A source tag is a release candidate, not a production certification or Frappe Marketplace approval.
 
-The version gate, standard banking field snapshot, Python runtime constraint and deployment helper are covered by tests. The helper is tested both when absent from the site's installed-app list and when already installed. An independent review found the pre-install get_attr restriction; the fixed constant import expression is tested through the CLI fallback semantics. Official v16 banking schemas/lifecycle, installer, get_attr/execute, background-job API, password API, request parsing, Page loader and IntegrationTestCase implementation were inspected. These checks do not substitute for a real site install or migration. The custom deployment patch awaits the user's actual Dockerfile/Compose command.
+## Historical evidence
+
+The earlier v16 port recorded 109 passing offline tests on 12 September 2026. That result is superseded by the current local run above and should not be quoted as verification of a newer release. Source inspection of official Frappe/ERPNext schemas, routing, password storage, transaction callbacks and test runners informed the v15/v16 implementation but does not replace executable integration checks.

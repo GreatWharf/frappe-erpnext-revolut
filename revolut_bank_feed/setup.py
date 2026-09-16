@@ -1,6 +1,7 @@
 """Browser setup endpoints. No shell execution or app installation capabilities."""
 
 import base64
+import json
 from urllib.parse import urlparse
 
 import frappe
@@ -9,7 +10,7 @@ from frappe.utils import cint, get_url, today
 from frappe.utils.password import set_encrypted_password
 
 from .api import connection_for_user, safe_action
-from .auth import connection_lock, exchange, get_client, secret
+from .auth import connection_lock, exchange, get_client, lock_configuration, secret
 from .core import FeedError
 from .importer import get_maps
 from .setup_core import authorization_code, make_certificate
@@ -163,6 +164,7 @@ def save_client_id(connection, client_id):
             doc.save()
         finally:
             frappe.flags.revolut_configuration_locked = False
+        frappe.db.commit()
     return {"saved": True}
 
 
@@ -242,45 +244,84 @@ def create_bank_account(connection, ledger, account_name):
 
 @frappe.whitelist(methods=["POST"])
 @safe_action
-def save_mappings(connection, selections, timezone="UTC"):
+def save_mappings(connection, selections, timezone="UTC", skipped_accounts=None):
     doc = connection_for_user(connection)
     if doc.enabled:
         raise FeedError("pause_connection_before_mapping")
     selections = frappe.parse_json(selections) if isinstance(selections, str) else selections
-    if not isinstance(selections, list) or not selections or len(selections) > 500:
+    skipped_accounts = (
+        frappe.parse_json(skipped_accounts) if isinstance(skipped_accounts, str) else skipped_accounts
+    )
+    skipped_accounts = [] if skipped_accounts is None else skipped_accounts
+    if (
+        not isinstance(selections, list)
+        or not isinstance(skipped_accounts, list)
+        or not 0 < len(selections) + len(skipped_accounts) <= 500
+    ):
         raise FeedError("choose_bank_accounts_first")
-    # Verify discovery against the bank immediately before saving user selections.
+    # Verify both selected and deliberately skipped identities; newly discovered or
+    # mistyped accounts must never become silent exclusions in the importer.
     with connection_lock(connection):
         accounts = get_client(doc).get("/accounts")
+    if not isinstance(accounts, list):
+        raise FeedError("invalid_accounts_response")
+    # Token refresh may commit during discovery. Acquire the transaction-scoped
+    # configuration lock only afterwards, and hold it through the final request commit.
+    lock_configuration(connection)
+    doc = frappe.get_doc("Revolut Connection", connection)
+    if doc.enabled:
+        raise FeedError("pause_connection_before_mapping")
     known = {(a["id"], a["currency"]) for a in accounts}
-    seen = set()
-    for row in selections:
-        pair = (row.get("account_id"), row.get("currency"))
+    seen, existing_maps = set(), {}
+    for row in selections + skipped_accounts:
+        if not isinstance(row, dict) or not all(
+            isinstance(row.get(key), str) for key in ("account_id", "currency")
+        ):
+            raise FeedError("invalid_or_duplicate_account_selection")
+        pair = (row["account_id"], row["currency"])
         if pair not in known or pair in seen:
             raise FeedError("invalid_or_duplicate_account_selection")
         seen.add(pair)
-        existing = frappe.db.get_value(
+        existing_maps[pair] = frappe.db.get_value(
             "Revolut Account Map",
             {"connection": connection, "account_id": pair[0], "currency": pair[1]},
             ["name", "bank_account"],
             as_dict=True,
         )
-        if existing:
-            if existing.bank_account != row.get("bank_account"):
-                raise FeedError("existing_mapping_is_immutable_use_advanced_settings")
-            continue
-        frappe.get_doc(
-            {
-                "doctype": "Revolut Account Map",
-                "connection": connection,
-                "account_id": pair[0],
-                "currency": pair[1],
-                "bank_account": row.get("bank_account"),
-                "timezone": timezone,
-                "fee_policy": "Review",
-                "enabled": 1,
-            }
-        ).insert()
+    skipped = {
+        (row["account_id"], row["currency"]) for row in json.loads(doc.get("skipped_accounts") or "[]")
+    }
+    for row in skipped_accounts:
+        pair = (row["account_id"], row["currency"])
+        if existing_maps[pair]:
+            raise FeedError("existing_mapping_cannot_be_skipped_use_advanced_settings")
+        skipped.add(pair)
+    for row in selections:
+        pair = (row["account_id"], row["currency"])
+        existing = existing_maps[pair]
+        if existing and existing.bank_account != row.get("bank_account"):
+            raise FeedError("existing_mapping_is_immutable_use_advanced_settings")
+        if not existing:
+            frappe.get_doc(
+                {
+                    "doctype": "Revolut Account Map",
+                    "connection": connection,
+                    "account_id": pair[0],
+                    "currency": pair[1],
+                    "bank_account": row.get("bank_account"),
+                    "timezone": timezone,
+                    "fee_policy": "Review",
+                    "enabled": 1,
+                }
+            ).insert()
+        skipped.discard(pair)
+    # Keep older exclusions (including closed accounts) until explicitly mapped.
+    frappe.db.set_value(
+        "Revolut Connection",
+        connection,
+        "skipped_accounts",
+        json.dumps([{"account_id": account, "currency": currency} for account, currency in sorted(skipped)]),
+    )
     return {"saved": len(selections)}
 
 
@@ -305,4 +346,5 @@ def pause(connection):
     doc = connection_for_user(connection)
     with connection_lock(connection):
         frappe.db.set_value(doc.doctype, doc.name, "enabled", 0)
+        frappe.db.commit()
     return {"paused": True}

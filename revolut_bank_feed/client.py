@@ -32,7 +32,7 @@ def parse_response(response):
         raise FeedError("response_too_large")
     try:
         return json.loads(response.content, parse_float=Decimal)
-    except ValueError, UnicodeDecodeError:
+    except (ValueError, UnicodeDecodeError):
         raise FeedError("invalid_json_response") from None
 
 
@@ -76,7 +76,7 @@ def token_request(environment, signed_assertion, *, code=None, refresh_token=Non
     try:
         if not 60 < int(result["expires_in"]) <= 86400:
             raise ValueError
-    except KeyError, ValueError, TypeError:
+    except (KeyError, ValueError, TypeError):
         raise FeedError("invalid_token_expiry") from None
     # The current API may omit scope. In that case READ is established at consent.
     if result.get("scope") and set(re.split(r"[,\s]+", result["scope"])) != {"READ"}:
@@ -154,7 +154,7 @@ class Client:
                     except ValueError:
                         try:
                             delay = parsedate_to_datetime(retry_after).timestamp() - time.time()
-                        except ValueError, TypeError:
+                        except (ValueError, TypeError):
                             pass
                 if delay > 60:
                     raise FeedError("revolut_rate_limit_retry_later")

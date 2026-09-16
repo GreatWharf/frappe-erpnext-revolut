@@ -1,3 +1,20 @@
+# 0.5.0 — Broader compatibility and clearer daily controls
+
+Release candidate dated 2026-09-16. Existing tags are unchanged.
+
+- Support matching Frappe/ERPNext v15 and v16 on MariaDB. Restore Python 3.10-compatible syntax, add a v15 Workspace fallback, and retain native v16 navigation.
+- Persist explicit account exclusions. Import selected FX/transfer legs when their counterpart was intentionally skipped, while continuing to flag genuinely unknown accounts for review.
+- Preserve source/audit identity and paused-account history. Adapt long reference text to older v15 Data fields without truncating the stored source payload.
+- Keep Sync now, Bank transactions, Reviews and Sync logs prominent. Organize secondary dashboard actions into Sync options and Extra data, with account management/pause separated and confirmed.
+- Group connection-form actions and hide sync commands that are unavailable while paused.
+- Hold configuration locks until commit/rollback, and persist API writes before releasing the connection lock. Token-refresh commits do not release active worker locks.
+- Include setup logos in wheel/source distributions and verify every runtime file in both archives.
+- Add Python 3.10/3.12/3.14 unit CI and real Frappe v15/v16 installation/migration/integration jobs on release branches and tags.
+
+**Upgrade:** Back up the database, private files and encryption key; update the app; run migration and your deployment's normal asset rebuild/restart. Older omitted mappings are not automatically inferred as intentional skips. Reopen account management and save your selections to record explicit exclusions. Review/backfill older held transactions after confirming those choices.
+
+See [compatibility](docs/v16-compatibility.md) and [verification](docs/verification.md). Check the exact release commit's CI and staging acceptance before production use. A tag is not Marketplace approval or live-bank certification.
+
 # 0.4.4 — Frappe Cloud Marketplace metadata
 
 - Declare Frappe v16 compatibility in `pyproject.toml` for Frappe Cloud validation.

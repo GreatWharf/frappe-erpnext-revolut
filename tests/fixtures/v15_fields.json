@@ -1,0 +1,92 @@
+{
+  "_source": {
+    "repository": "https://github.com/frappe/erpnext",
+    "branch": "version-15",
+    "retrieved": "2026-09-16"
+  },
+  "Bank Transaction": {
+    "is_submittable": 1,
+    "fields": {
+      "naming_series": "Select",
+      "date": "Date",
+      "column_break_2": "Column Break",
+      "status": "Select",
+      "bank_account": "Link",
+      "company": "Link",
+      "section_break_4": "Section Break",
+      "column_break_7": "Column Break",
+      "currency": "Link",
+      "section_break_10": "Section Break",
+      "description": "Small Text",
+      "section_break_14": "Section Break",
+      "reference_number": "Small Text",
+      "transaction_id": "Data",
+      "payment_entries": "Table",
+      "section_break_18": "Section Break",
+      "allocated_amount": "Currency",
+      "amended_from": "Link",
+      "column_break_17": "Column Break",
+      "unallocated_amount": "Currency",
+      "party_section": "Section Break",
+      "party_type": "Link",
+      "party": "Dynamic Link",
+      "deposit": "Currency",
+      "withdrawal": "Currency",
+      "column_break_10": "Column Break",
+      "transaction_type": "Data",
+      "column_break_3czf": "Column Break",
+      "bank_party_name": "Data",
+      "bank_party_iban": "Data",
+      "bank_party_account_number": "Data",
+      "column_break_oufv": "Column Break",
+      "extended_bank_statement_section": "Section Break",
+      "included_fee": "Currency",
+      "excluded_fee": "Currency"
+    }
+  },
+  "Bank Account": {
+    "is_submittable": 0,
+    "fields": {
+      "account_name": "Data",
+      "account": "Link",
+      "bank": "Link",
+      "account_type": "Link",
+      "account_subtype": "Link",
+      "column_break_7": "Column Break",
+      "is_default": "Check",
+      "is_company_account": "Check",
+      "company": "Link",
+      "section_break_11": "Section Break",
+      "party_type": "Link",
+      "column_break_14": "Column Break",
+      "party": "Dynamic Link",
+      "account_details_section": "Section Break",
+      "iban": "Data",
+      "column_break_12": "Column Break",
+      "bank_account_no": "Data",
+      "address_and_contact": "Section Break",
+      "address_html": "HTML",
+      "column_break_13": "Column Break",
+      "contact_html": "HTML",
+      "integration_details_section": "Section Break",
+      "integration_id": "Data",
+      "last_integration_date": "Date",
+      "column_break_27": "Column Break",
+      "mask": "Data",
+      "branch_code": "Data",
+      "disabled": "Check"
+    }
+  },
+  "Currency Exchange": {
+    "is_submittable": 0,
+    "fields": {
+      "date": "Date",
+      "from_currency": "Link",
+      "to_currency": "Link",
+      "exchange_rate": "Float",
+      "column_break_5": "Column Break",
+      "for_buying": "Check",
+      "for_selling": "Check"
+    }
+  }
+}

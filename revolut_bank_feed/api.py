@@ -21,7 +21,7 @@ def safe_action(fn):
         frappe.flags.disable_traceback = True
         try:
             return fn(*args, **kwargs)
-        except frappe.PermissionError, frappe.DoesNotExistError:
+        except (frappe.PermissionError, frappe.DoesNotExistError):
             raise
         except Exception as exc:
             frappe.db.rollback()
@@ -64,6 +64,7 @@ def set_private_key(connection, encoded_key):
             doc.save()
         finally:
             frappe.flags.revolut_configuration_locked = False
+        frappe.db.commit()
     return {"saved": True}
 
 
@@ -122,7 +123,8 @@ def start_backfill(connection, from_date, through_date):
             {"backfill_next": iso(start), "backfill_end": iso(end)},
             update_modified=False,
         )
-        enqueue_connection(doc.name)
+        frappe.db.commit()
+    enqueue_connection(doc.name)
     return {"queued": True}
 
 
@@ -144,4 +146,5 @@ def review_and_apply(source_transaction, note):
         except Exception:
             frappe.db.rollback(save_point="review_apply")
             raise
+        frappe.db.commit()
     return result

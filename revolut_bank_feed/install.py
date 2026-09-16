@@ -61,10 +61,10 @@ for key, label in [
 def check_versions():
     import erpnext
 
-    if frappe.__version__.split(".")[0] != "16" or erpnext.__version__.split(".")[0] != "16":
-        frappe.throw(
-            "Revolut Bank Feed requires Frappe and ERPNext v16. Other major versions need validation."
-        )
+    frappe_major = frappe.__version__.split(".")[0]
+    erpnext_major = erpnext.__version__.split(".")[0]
+    if frappe_major not in {"15", "16"} or erpnext_major != frappe_major:
+        frappe.throw("Revolut Bank Feed requires matching Frappe and ERPNext v15 or v16 versions.")
     if frappe.db.db_type != "mariadb":
         frappe.throw("This release supports MariaDB-backed sites.")
 

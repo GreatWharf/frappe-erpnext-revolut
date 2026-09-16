@@ -47,7 +47,7 @@ def receive(key=None, **kwargs):
         tx_id = payload.get("data", {}).get("id")
         if not isinstance(tx_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,140}", tx_id):
             return _reject(400)
-    except FeedError, ValueError, TypeError, AttributeError:
+    except (FeedError, ValueError, TypeError, AttributeError):
         return _reject(401)
     name_key = identity(name, raw.hex())
     if not frappe.db.exists("Revolut Webhook Event", name_key):

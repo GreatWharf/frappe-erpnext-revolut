@@ -44,20 +44,24 @@ frappe.ui.form.on('Revolut Connection', {
       const rows = result.message.map(row => `<tr><td>${esc(row.name || '')}</td><td>${esc(row.id)}</td><td>${esc(row.currency)}</td><td>${esc(row.state || '')}</td></tr>`).join('');
       frappe.msgprint({title: __('Revolut Accounts'), wide: true,
         message: `<p>${__('Copy an account ID into a Revolut Account Map for this connection.')}</p><table class="table table-bordered"><thead><tr><th>${__('Name')}</th><th>${__('Account ID')}</th><th>${__('Currency')}</th><th>${__('State')}</th></tr></thead><tbody>${rows}</tbody></table>`});
-    });
-    frm.add_custom_button(__('Account Mappings'), () => frappe.set_route('List', 'Revolut Account Map', {connection: frm.doc.name}));
-    frm.add_custom_button(__('Sync Now'), async () => {
-      if (!saved()) return;
-      await call('sync_now'); frappe.show_alert(__('Sync queued. Check Sync Logs for results.'));
-    });
-    frm.add_custom_button(__('Historical Backfill'), () => {
-      if (!saved()) return;
-      frappe.prompt([
-        {fieldname: 'from_date', fieldtype: 'Date', label: __('From'), reqd: 1, default: frm.doc.historical_from},
-        {fieldname: 'through_date', fieldtype: 'Date', label: __('Through (inclusive)'), reqd: 1, default: frappe.datetime.get_today()},
-      ], async values => { await call('start_backfill', values); await frm.reload_doc(); }, __('Historical Backfill'));
-    });
-    frm.add_custom_button(__('Sync Logs'), () => frappe.set_route('List', 'Revolut Sync Log', {connection: frm.doc.name}));
-    frm.add_custom_button(__('Source Reviews'), () => frappe.set_route('List', 'Revolut Source Transaction', {connection: frm.doc.name, needs_review: 1}));
+    }, __('Accounts'));
+    frm.add_custom_button(__('Account Mappings'), () => frappe.set_route('List', 'Revolut Account Map', {connection: frm.doc.name}), __('Accounts'));
+    if (frm.doc.enabled) {
+      frm.add_custom_button(__('Sync Now'), async () => {
+        if (!saved()) return;
+        await call('sync_now'); frappe.show_alert(__('Sync queued. Check Sync Logs for results.'));
+      });
+      frm.change_custom_button_type(__('Sync Now'), null, 'primary');
+      frm.add_custom_button(__('Historical Backfill'), () => {
+        if (!saved()) return;
+        frappe.prompt([
+          {fieldname: 'from_date', fieldtype: 'Date', label: __('From'), reqd: 1, default: frm.doc.historical_from},
+          {fieldname: 'through_date', fieldtype: 'Date', label: __('Through (inclusive)'), reqd: 1, default: frappe.datetime.get_today()},
+        ], async values => { await call('start_backfill', values); await frm.reload_doc(); }, __('Historical Backfill'));
+      }, __('Sync'));
+    }
+    frm.add_custom_button(__('Bank Transactions'), () => frappe.set_route('List', 'Bank Transaction', {company: frm.doc.company}), __('View'));
+    frm.add_custom_button(__('Sync Logs'), () => frappe.set_route('List', 'Revolut Sync Log', {connection: frm.doc.name}), __('View'));
+    frm.add_custom_button(__('Source Reviews'), () => frappe.set_route('List', 'Revolut Source Transaction', {connection: frm.doc.name, needs_review: 1}), __('View'));
   },
 });

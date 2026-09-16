@@ -1,4 +1,49 @@
+import json
 from copy import deepcopy
+
+
+def workspace_document():
+    """v15 Workspace entry points, kept separate from v16 navigation fixtures."""
+    shortcuts = [
+        {"label": "Connect Revolut", "type": "Page", "link_to": "revolut-setup"},
+        {"label": "Connections", "type": "DocType", "link_to": "Revolut Connection", "doc_view": "List"},
+        {
+            "label": "Account mappings",
+            "type": "DocType",
+            "link_to": "Revolut Account Map",
+            "doc_view": "List",
+        },
+        {"label": "Bank transactions", "type": "DocType", "link_to": "Bank Transaction", "doc_view": "List"},
+        {
+            "label": "Source transactions",
+            "type": "DocType",
+            "link_to": "Revolut Source Transaction",
+            "doc_view": "List",
+        },
+        {"label": "Sync logs", "type": "DocType", "link_to": "Revolut Sync Log", "doc_view": "List"},
+    ]
+    return {
+        "doctype": "Workspace",
+        "name": "Revolut Bank Feed",
+        "label": "Revolut Bank Feed",
+        "title": "Revolut Bank Feed",
+        "module": "Revolut Bank Feed",
+        "public": 1,
+        "is_hidden": 0,
+        "icon": "bank",
+        "roles": [{"role": "System Manager"}],
+        "shortcuts": shortcuts,
+        "content": json.dumps(
+            [
+                {
+                    "id": f"revolut-shortcut-{index}",
+                    "type": "shortcut",
+                    "data": {"shortcut_name": row["label"], "col": 4},
+                }
+                for index, row in enumerate(shortcuts)
+            ]
+        ),
+    }
 
 
 def merge_home_icon(layout, icon):

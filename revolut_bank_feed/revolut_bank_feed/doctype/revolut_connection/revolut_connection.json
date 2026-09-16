@@ -23,6 +23,7 @@
     "refresh_token",
     "token_expires_at",
     "authorized",
+    "skipped_accounts",
     "historical_from",
     "lookback_days",
     "window_days",
@@ -166,6 +167,14 @@
       "fieldtype": "Check",
       "label": "Authorized",
       "read_only": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "skipped_accounts",
+      "fieldtype": "Long Text",
+      "label": "Explicitly Skipped Accounts",
+      "read_only": 1,
+      "hidden": 1,
       "no_copy": 1
     },
     {

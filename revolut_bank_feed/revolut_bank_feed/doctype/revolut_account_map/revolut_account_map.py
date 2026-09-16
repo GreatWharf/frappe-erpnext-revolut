@@ -3,23 +3,22 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import frappe
 from frappe.model.document import Document
 
-from revolut_bank_feed.auth import connection_lock
+from revolut_bank_feed.auth import lock_configuration
 from revolut_bank_feed.core import FeedError, identity, validate_mapping
 
 
 class RevolutAccountMap(Document):
     def validate(self):
         frappe.only_for("System Manager")
+        lock_configuration(self.connection)
         connection = frappe.get_doc("Revolut Connection", self.connection)
         connection.check_permission("write")
         if connection.enabled:
             frappe.throw("Disable and save the connection before editing its account mappings.")
-        with connection_lock(connection.name):
-            pass
         self.company, self.environment = connection.company, connection.environment
         try:
             ZoneInfo(self.timezone)
-        except ZoneInfoNotFoundError, ValueError:
+        except (ZoneInfoNotFoundError, ValueError):
             frappe.throw("Use an IANA timezone such as Europe/London or UTC.")
         self.source_account_key = identity(self.environment, self.account_id, self.currency)
         bank = frappe.get_doc("Bank Account", self.bank_account)
@@ -43,9 +42,8 @@ class RevolutAccountMap(Document):
                     )
 
     def on_trash(self):
+        lock_configuration(self.connection)
         connection = frappe.get_doc("Revolut Connection", self.connection)
         connection.check_permission("write")
         if connection.enabled or frappe.db.exists("Revolut Source Leg", {"account_map": self.name}):
             frappe.throw("Disable the connection; only unused mappings can be deleted.")
-        with connection_lock(connection.name):
-            pass

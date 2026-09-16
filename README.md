@@ -7,7 +7,7 @@
 
 # Revolut Bank Feed for ERPNext
 
-**Unofficial · Read-only · ERPNext v16 · MIT licensed**
+**Unofficial · Read-only · ERPNext v15 & v16 · MIT licensed**
 
 Revolut Bank Feed brings your Revolut Business accounts into ERPNext so you can see transactions, check balances, handle foreign-currency activity, and reconcile your books with less manual work. It was built for internal use at Great Wharf and is shared as an independent community app. It is not affiliated with Revolut or Frappe.
 
@@ -27,12 +27,12 @@ Revolut Bank Feed brings your Revolut Business accounts into ERPNext so you can 
 
 This app requires an active **Revolut Business Grow, Scale, or Enterprise plan**. Revolut's Business API is not available on Basic or personal accounts. See [Revolut's current plan and API requirements](https://help.revolut.com/business/help/integrating-with-external-apps/revolut-business-api/question-using-revolut-business-api/). Revolut may apply its own transaction fees, exchange-rate rules, or usage limits.
 
-You also need ERPNext v16 and an ERPNext System Manager account for the first connection.
+You also need matching Frappe/ERPNext v15 or v16 on MariaDB and an ERPNext System Manager account for the first connection. See the [tested-stack and runtime requirements](docs/v16-compatibility.md).
 
 ## Getting started
 
 1. Install the app from the Frappe Marketplace.
-2. Open **Revolut Bank Feed** from the ERPNext home screen, or open **Banking → Connect Revolut**.
+2. Open **Revolut Bank Feed** from ERPNext, or go to `/desk/revolut-setup` on v16 (`/app/revolut-setup` on v15).
 3. Follow the short connection guide in ERPNext.
 4. Choose your company and import date.
 5. Select the Revolut accounts you want to use and match them to ERPNext Bank Accounts.
@@ -48,6 +48,7 @@ The app reads data from Revolut and creates standard ERPNext Bank Transactions. 
 
 - [Setup guide](docs/browser-setup.md)
 - [Requirements](docs/v16-compatibility.md)
+- [Release notes](CHANGELOG.md)
 - [Documentation](docs/README.md)
 - [Troubleshooting](docs/operations.md)
 - [Report an issue](https://github.com/GreatWharf/frappe-erpnext-revolut/issues) — never include credentials or financial data.

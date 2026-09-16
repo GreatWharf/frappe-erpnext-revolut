@@ -1,7 +1,8 @@
 include README.md LICENSE CHANGELOG.md pyproject.toml
 include .gitignore .dockerignore
 recursive-include .github *.yml
-recursive-include revolut_bank_feed *.json *.js *.txt *.md *.html *.svg
-recursive-include docs *.md
+recursive-include revolut_bank_feed *.json *.js *.txt *.md *.html *.css *.svg *.png
+recursive-include docs *.md *.svg *.png
+recursive-include scripts *.py
 recursive-include tests *.py *.json *.cjs
 recursive-include docker *.json *.yaml *.md *.sh

@@ -4,13 +4,18 @@ from copy import deepcopy
 from uuid import uuid4
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from revolut_bank_feed.core import FeedError, identity
 from revolut_bank_feed.importer import get_maps, ingest
 
-# Frappe's test-record builder creates ERPNext's standard test Company and COA.
+try:
+    from frappe.tests import IntegrationTestCase
+except ImportError:
+    from frappe.tests.utils import FrappeTestCase as IntegrationTestCase
+
+# The two runners use different names for the same test-record dependencies.
 EXTRA_TEST_RECORD_DEPENDENCIES = ["Company"]
+test_dependencies = EXTRA_TEST_RECORD_DEPENDENCIES
 
 
 class TestBankFeedIntegration(IntegrationTestCase):
@@ -96,8 +101,9 @@ class TestBankFeedIntegration(IntegrationTestCase):
         from revolut_bank_feed.auth import save_tokens, secret
         from revolut_bank_feed.setup import generate_certificate, save_client_id
 
-        # Keep fixture writes in the test transaction; no remote authorization occurs.
-        with patch.object(frappe.db, "commit"):
+        # Simulate separate setup requests without committing rollbackable fixtures.
+        frappe.db.after_commit.run()
+        with patch.object(frappe.db, "commit", side_effect=frappe.db.after_commit.run):
             generate_certificate(self.connection.name)
             private_key = secret(self.connection.name, "private_key")
             self.assertTrue(private_key)
@@ -117,6 +123,19 @@ class TestBankFeedIntegration(IntegrationTestCase):
             self.assertEqual(secret(self.connection.name, "private_key"), private_key)
             self.assertEqual(secret(self.connection.name, "access_token"), "synthetic-access")
             self.assertEqual(secret(self.connection.name, "refresh_token"), "synthetic-refresh")
+
+    def test_mapping_lock_blocks_worker_until_transaction_callback(self):
+        from revolut_bank_feed.auth import connection_lock
+
+        self.mapping.enabled = 0
+        self.mapping.save()
+        with self.assertRaises(FeedError):
+            with connection_lock(self.connection.name):
+                self.fail("Worker acquired a lock before configuration transaction completed")
+        # Exercise the real Redis release callback while keeping fixtures rollbackable.
+        frappe.db.after_commit.run()
+        with connection_lock(self.connection.name):
+            pass
 
     def test_submitted_bank_row_is_idempotent_and_has_no_gl_entries(self):
         gl_count = frappe.db.count("GL Entry")
