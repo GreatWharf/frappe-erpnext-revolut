@@ -6,7 +6,11 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from revolut_bank_feed.navigation_data import merge_home_icon
+from revolut_bank_feed.navigation_data import (
+    desktop_icon_document,
+    merge_home_icon,
+    workspace_sidebar_document,
+)
 
 
 @pytest.fixture
@@ -82,8 +86,8 @@ def test_v16_keeps_sidebar_icon_and_existing_desktop_layout_path(navigation_modu
         return False
 
     fake.db.exists = exists
-    root = Path(__file__).parents[1] / "revolut_bank_feed"
-    fake.get_app_path = lambda app, kind, filename: str(root / kind / filename)
+    # No frappe.get_app_path is provided: navigation must build Workspace Sidebar
+    # and Desktop Icon documents from static Python data, never the filesystem.
     create_doc = fake.get_doc
     fake.get_doc = lambda *args: (
         SimpleNamespace(as_dict=lambda: {"label": "Revolut Bank Feed"})
@@ -94,9 +98,39 @@ def test_v16_keeps_sidebar_icon_and_existing_desktop_layout_path(navigation_modu
     fake.get_all = lambda doctype, **kwargs: tables.append(doctype) or []
     module.ensure_navigation()
     assert [row["doctype"] for row in inserted] == ["Workspace Sidebar", "Desktop Icon"]
+    assert inserted[0] == workspace_sidebar_document()
+    assert inserted[1] == desktop_icon_document()
     assert tables == ["Desktop Layout"]
     assert ("Workspace", "Revolut Bank Feed") not in existing_queries
     assert "desktop_icons" in cache_keys
+
+
+def test_workspace_sidebar_document_matches_json_fixture():
+    """navigation_data must stay byte-for-byte consistent with the on-disk fixture."""
+    fixture_path = (
+        Path(__file__).parents[1] / "revolut_bank_feed" / "workspace_sidebar" / "revolut_bank_feed.json"
+    )
+    with fixture_path.open() as source:
+        fixture = json.load(source)
+    assert workspace_sidebar_document() == fixture
+
+
+def test_desktop_icon_document_matches_json_fixture():
+    """navigation_data must stay byte-for-byte consistent with the on-disk fixture."""
+    fixture_path = Path(__file__).parents[1] / "revolut_bank_feed" / "desktop_icon" / "revolut_bank_feed.json"
+    with fixture_path.open() as source:
+        fixture = json.load(source)
+    assert desktop_icon_document() == fixture
+
+
+def test_navigation_data_builders_return_independent_copies():
+    """Callers may mutate the returned document without corrupting later calls."""
+    first = workspace_sidebar_document()
+    first["items"].append({"type": "Link"})
+    assert workspace_sidebar_document() != first
+    icon = desktop_icon_document()
+    icon["roles"].append({"role": "Accounts User"})
+    assert desktop_icon_document() != icon
 
 
 def test_apps_screen_permissions_are_explicit_booleans(navigation_module):

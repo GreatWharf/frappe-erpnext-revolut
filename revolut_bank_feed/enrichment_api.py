@@ -124,5 +124,7 @@ def use_quote(name):
             )
         ).insert()
         frappe.db.set_value("Revolut FX Quote", name, "currency_exchange", rate.name)
-        frappe.db.commit()
+        # Persist the created Currency Exchange before releasing the per-currency-pair
+        # lock; a racing request must see it as already created, not attempt a duplicate.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     return {"name": rate.name}

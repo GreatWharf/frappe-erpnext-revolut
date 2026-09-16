@@ -150,7 +150,9 @@ def generate_certificate(connection, recover_missing_key=False):
             },
             update_modified=False,
         )
-        frappe.db.commit()
+        # Persist the new certificate/key before releasing the connection lock; a
+        # waiter must never observe the lock free while the credential is uncommitted.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     return {
         "public_certificate": certificate_pem.decode(),
         "expires_on": str(cert.not_valid_after_utc.date()),
@@ -173,7 +175,9 @@ def save_client_id(connection, client_id):
             doc.save()
         finally:
             frappe.flags.revolut_configuration_locked = False
-        frappe.db.commit()
+        # Persist the client ID before releasing the connection lock; a waiter must
+        # never see the lock free while the saved client_id is still uncommitted.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     return {"saved": True}
 
 
@@ -347,7 +351,9 @@ def activate(connection):
         if not doc.authorized or not any(row.enabled for row in get_maps(doc, for_update=True).values()):
             raise FeedError("finish_authorization_and_account_mapping_first")
         frappe.db.set_value(doc.doctype, doc.name, "enabled", 1)
-        frappe.db.commit()
+        # Persist the enabled flag before releasing the connection lock and enqueueing;
+        # the scheduled/queued run must observe this connection as committed-enabled.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     enqueue_connection(connection)
     return {"queued": True}
 
@@ -358,5 +364,7 @@ def pause(connection):
     doc = connection_for_user(connection)
     with connection_lock(connection):
         frappe.db.set_value(doc.doctype, doc.name, "enabled", 0)
-        frappe.db.commit()
+        # Persist the disabled flag before releasing the connection lock; a run that
+        # is waiting on this lock must see the connection as committed-disabled.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     return {"paused": True}

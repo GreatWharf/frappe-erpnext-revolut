@@ -10,7 +10,12 @@ def ensure_navigation():
     """Add entry points after standard navigation sync; preserve existing customizations."""
     import json
 
-    from revolut_bank_feed.navigation_data import merge_home_icon, workspace_document
+    from revolut_bank_feed.navigation_data import (
+        desktop_icon_document,
+        merge_home_icon,
+        workspace_document,
+        workspace_sidebar_document,
+    )
 
     if frappe.__version__.split(".")[0] == "15":
         # v15's legacy Desktop Icon is not the v16 launcher; its Desk uses Workspace.
@@ -20,11 +25,13 @@ def ensure_navigation():
         return
 
     # after_install runs before Frappe's standard navigation sync on a fresh site.
-    for kind, doctype in (("workspace_sidebar", "Workspace Sidebar"), ("desktop_icon", "Desktop Icon")):
+    # Documents come from static Python builders (no runtime filesystem access).
+    for doctype, builder in (
+        ("Workspace Sidebar", workspace_sidebar_document),
+        ("Desktop Icon", desktop_icon_document),
+    ):
         if not frappe.db.exists(doctype, "Revolut Bank Feed"):
-            path = frappe.get_app_path("revolut_bank_feed", kind, "revolut_bank_feed.json")
-            with open(path) as source:
-                frappe.get_doc(json.load(source)).insert(ignore_permissions=True)
+            frappe.get_doc(builder()).insert(ignore_permissions=True)
 
     if frappe.db.exists("Workspace Sidebar", "Banking"):
         sidebar = frappe.get_doc("Workspace Sidebar", "Banking")

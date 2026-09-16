@@ -1,3 +1,10 @@
+# 0.5.2 — Marketplace static-scan remediation
+
+- Build navigation documents (Workspace sidebar, Desktop Icon) from static Python data instead of reading bundled JSON at runtime. No `open()` calls remain in production code paths; fixtures stay on disk and tests assert the builders match them exactly.
+- Inline CI failure-tail annotations into workflow shell steps and remove the `scripts/run_ci.py` subprocess wrapper. No dynamic process execution remains.
+- Document every intentional `frappe.db.commit()` (38 sites: token durability, commit-before-lock-release, checkpoint recovery, webhook inbox) with an explanatory comment and a scoped `nosemgrep` annotation, so the Marketplace scan shows zero unexplained manual commits.
+- Replace the one `map()` call in enrichment with a list comprehension, and add transaction-ordering tests for quote linking. No banking logic or schema changes.
+
 # 0.5.1 — Marketplace version-range correction
 
 - Change the Frappe compatibility ceiling from `<17.0.0-dev` to the stable `<17.0.0` required by Frappe Cloud's range validator. v15 and v16 support is unchanged.

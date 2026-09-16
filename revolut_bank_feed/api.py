@@ -64,7 +64,9 @@ def set_private_key(connection, encoded_key):
             doc.save()
         finally:
             frappe.flags.revolut_configuration_locked = False
-        frappe.db.commit()
+        # Persist the new key before releasing the connection lock: a waiter that
+        # acquires the lock next must never see the pre-rotation key as current.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     return {"saved": True}
 
 
@@ -123,7 +125,9 @@ def start_backfill(connection, from_date, through_date):
             {"backfill_next": iso(start), "backfill_end": iso(end)},
             update_modified=False,
         )
-        frappe.db.commit()
+        # Persist the backfill range before releasing the connection lock and enqueueing;
+        # a worker that dequeues the job must observe the committed range, not a stale one.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     enqueue_connection(doc.name)
     return {"queued": True}
 
@@ -146,5 +150,7 @@ def review_and_apply(source_transaction, note):
         except Exception:
             frappe.db.rollback(save_point="review_apply")
             raise
-        frappe.db.commit()
+        # Persist the reviewed transaction before releasing the connection lock; a
+        # concurrent sync run must not re-import it while it is still uncommitted.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     return result

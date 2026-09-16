@@ -92,7 +92,9 @@ def account_snapshots(connection, accounts):
                 old.name,
                 {"upstream_state": "missing_from_latest_list", "fingerprint": "missing"},
             )
-    frappe.db.commit()
+    # Commit account snapshot evidence now, while still under the connection lock;
+    # later phases in this run must see committed account state, not a half-written batch.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def due(value, hours=24):
@@ -120,9 +122,13 @@ def rates(connection, client, accounts):
             upstream_state="Indicative sell quote",
             **values,
         )
-        frappe.db.commit()
+        # Commit each FX quote as fetched; a crash partway through many currencies
+        # must not lose quotes already retrieved.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     frappe.db.set_value(CONNECTION, connection.name, "last_fx_at", now_datetime(), update_modified=False)
-    frappe.db.commit()
+    # Persist last_fx_at only after every quote committed, so a retry cannot mistake
+    # a partial run for a completed FX refresh.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def receipts(connection, client, expense_name, row):
@@ -157,7 +163,9 @@ def receipts(connection, client, expense_name, row):
             frappe.db.set_value(
                 "Revolut Expense", expense_name, "receipt_files", encoded(stored), update_modified=False
             )
-            frappe.db.commit()
+            # Commit this receipt immediately: siblings are fetched one at a time and
+            # this file's record must survive even if a later receipt in the loop fails.
+            frappe.db.commit()  # nosemgrep: frappe-manual-commit
         except Exception as exc:
             frappe.db.rollback()
             errors.append(safe_error(exc))
@@ -198,14 +206,19 @@ def expense_record(connection, client, row):
         source_transaction=source,
         description=data.get("description"),
     )
-    frappe.db.commit()
+    # Commit the expense record before computing receipt_pending; enrichment runs
+    # process many expenses per call and must not lose ones already saved if a
+    # later row in the caller's loop fails.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
     stored = json.loads(frappe.db.get_value("Revolut Expense", name, "receipt_files") or "{}")
     pending = any(
         receipt not in stored or not frappe.db.exists("File", stored[receipt])
         for receipt in data.get("receipt_ids", [])
     )
     frappe.db.set_value("Revolut Expense", name, "receipt_pending", int(pending), update_modified=False)
-    frappe.db.commit()
+    # Commit the receipt_pending flag as its own durable step so a resumed run can
+    # find and retry pending receipts even though the expense record already landed.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
     return name
 
 
@@ -238,7 +251,10 @@ def receipt_batch(connection, client):
                 dict(receipt_error_code=code, receipt_last_checked=now_datetime()),
                 update_modified=False,
             )
-        frappe.db.commit()
+        # Commit this expense's receipt outcome (success or recorded error) before
+        # the next one; the batch is bounded to 20 rows and must make durable
+        # progress on each so a crash never redoes or loses a completed row.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     if errors:
         raise FeedError("receipt_retry_required")
 
@@ -251,13 +267,20 @@ def expense_window(connection, client, start, end, prefix):
     else:
         page_to = end
         frappe.db.set_value(
-            CONNECTION, connection.name, dict(zip(keys, map(iso, (start, end, end)))), update_modified=False
+            CONNECTION,
+            connection.name,
+            dict(zip(keys, [iso(value) for value in (start, end, end)])),
+            update_modified=False,
         )
-        frappe.db.commit()
+        # Freeze and persist the window boundaries before fetching any page; a
+        # retry must resume this exact window, never silently pick a new one.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
     def checkpoint(value):
         frappe.db.set_value(CONNECTION, connection.name, keys[2], iso(value), update_modified=False)
-        frappe.db.commit()
+        # Advance and commit the page checkpoint immediately so a crash mid-window
+        # resumes at the last committed page, not the window start.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
     for row in iter_expenses(
         lambda params: client.get("/expenses", params), start, page_to, checkpoint=checkpoint
@@ -280,7 +303,9 @@ def expenses(connection, client):
     if start < end:
         end = expense_window(connection, client, start, end, "expense")
         frappe.db.set_value(CONNECTION, connection.name, "expense_cursor", iso(end), update_modified=False)
-        frappe.db.commit()
+        # Advance the expense cursor only after the window fully committed; a crash
+        # before this commit simply re-runs the window (idempotent), never skips it.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
     if due(connection.last_expense_audit_at):
         # Rotate 30 days per day to discover old edits/receipts, including terminal expenses.
         start = utc(connection.expense_audit_cursor) if connection.expense_audit_cursor else earliest
@@ -295,7 +320,9 @@ def expenses(connection, client):
                 dict(expense_audit_cursor=iso(end), last_expense_audit_at=now_datetime()),
                 update_modified=False,
             )
-            frappe.db.commit()
+            # Advance the audit cursor only after the window fully committed; a crash
+            # before this commit simply re-audits the segment, never skips it.
+            frappe.db.commit()  # nosemgrep: frappe-manual-commit
     # Older unfinished expenses can receive approval/receipts long after expense_date.
     for row in frappe.get_all(
         "Revolut Expense",
@@ -314,10 +341,12 @@ def expenses(connection, client):
                 raise FeedError("expense_identity_mismatch")
             expense_record(connection, client, fresh)
         except Exception:
+            # Persist last_seen_at before re-raising so this expense is not
+            # immediately retried in a tight loop on the next scheduler tick.
             frappe.db.set_value(
                 "Revolut Expense", row.name, "last_seen_at", now_datetime(), update_modified=False
             )
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep: frappe-manual-commit
             raise
 
 
@@ -382,9 +411,13 @@ def catalogs(connection, client):
                         reference_type="Label",
                         group_id=rid,
                     )
-            frappe.db.commit()
+            # Commit each catalog/reference page as fetched; catalog syncs can span
+            # many pages and must not lose earlier rows if a later page fails.
+            frappe.db.commit()  # nosemgrep: frappe-manual-commit
     frappe.db.set_value(CONNECTION, connection.name, "last_catalog_at", now_datetime(), update_modified=False)
-    frappe.db.commit()
+    # Persist last_catalog_at only after every row committed, so a partial catalog
+    # sync is retried in full rather than mistaken for a completed one.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def enqueue(name):
@@ -422,7 +455,9 @@ def run(connection_name):
                     status="Running",
                 )
             ).insert(ignore_permissions=True)
-            frappe.db.commit()
+            # Persist the Running log before any phase runs; if the worker is killed
+            # mid-run, the log must already show an attempt started, not vanish.
+            frappe.db.commit()  # nosemgrep: frappe-manual-commit
             accounts = None
             try:
                 accounts = client.get("/accounts")
@@ -458,7 +493,9 @@ def run(connection_name):
                 log.name,
                 dict(status=status, error_code=error, finished_at=now_datetime()),
             )
-            frappe.db.commit()
+            # Final commit while still holding the connection lock: extras status/log
+            # must be durable before the lock is released and another run can start.
+            frappe.db.commit()  # nosemgrep: frappe-manual-commit
             return {"status": status, "error_code": error}
     except FeedError as exc:
         if str(exc) == "connection_busy":

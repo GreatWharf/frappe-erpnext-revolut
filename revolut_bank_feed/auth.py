@@ -98,7 +98,7 @@ def save_tokens(doc, result):
     )
     # Token refresh invalidates the old token remotely. Persist before importing any
     # transaction, so a subsequent failed import cannot roll this credential back.
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def access_token(name, force=False):

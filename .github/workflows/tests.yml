@@ -19,7 +19,20 @@ jobs:
         with:
           node-version: '24'
       - run: node tests/test_desk_loader.cjs
-      - run: python scripts/run_ci.py python -m pytest -q
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          if python -m pytest -q 2>&1 | tee ci-output.log; then
+            status=0
+          else
+            status=$?
+          fi
+          if [ "$status" -ne 0 ]; then
+            message=$(tail -c 3500 ci-output.log | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error::${message}"
+          fi
+          rm -f ci-output.log
+          exit "$status"
       - run: ruff check .
       - run: ruff format --check .
       - name: Check Desk JavaScript

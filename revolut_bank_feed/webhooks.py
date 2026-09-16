@@ -67,7 +67,7 @@ def receive(key=None, **kwargs):
         doc.insert(ignore_permissions=True, set_name=name_key, ignore_if_duplicate=True)
     # Inbox commit precedes best-effort queue delivery. Redis/worker failure cannot
     # lose accepted events: the periodic scheduler drains Pending/Retry rows.
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
     try:
         enqueue_connection(name)
     except Exception:

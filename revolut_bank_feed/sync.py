@@ -49,7 +49,9 @@ def _persist_transaction(connection, tx, maps, stats):
     stats["transactions_seen"] += 1
     stats["bank_rows_created"] += result["created"]
     stats["review_count"] += result["review"]
-    frappe.db.commit()
+    # Commit each transaction as it lands; a crash before the next one must not
+    # redo or lose bank rows already created here (checkpoint recovery).
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def _fetch_one(client, transaction_id):
@@ -93,10 +95,14 @@ def _inbox(connection, client, maps, stats):
                 },
                 update_modified=False,
             )
-            frappe.db.commit()
+            # Retry bookkeeping must be durable even though this run is about to fail:
+            # a crashed worker must resume this event from Retry, never lose it silently.
+            frappe.db.commit()  # nosemgrep: frappe-manual-commit
             # Fail the run visibly and allow scheduled/backfill recovery on next run.
             raise
-        frappe.db.commit()
+        # Mark this inbox event durably Done before moving to the next one; a crash
+        # here must never cause an already-ingested transaction to be redelivered.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def _pending(connection, client, maps, stats):
@@ -122,7 +128,9 @@ def _pending(connection, client, maps, stats):
             frappe.db.set_value(
                 "Revolut Source Transaction", row.name, "last_checked", now_datetime(), update_modified=False
             )
-            frappe.db.commit()
+            # Persist the rotated last_checked now; a crash before the next row must
+            # not re-fetch this one immediately and starve every later pending row.
+            frappe.db.commit()  # nosemgrep: frappe-manual-commit
             errors.append(safe_error(exc))
     if errors:
         raise FeedError(";".join(dict.fromkeys(errors))[:140])
@@ -153,13 +161,17 @@ def _window(connection, client, maps, stats, start, end, prefix):
             },
             update_modified=False,
         )
-        frappe.db.commit()
+        # Freeze and persist the window boundaries before fetching any page; a
+        # retry must resume this exact window, never silently pick a new one.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
     def checkpoint(next_to):
         frappe.db.set_value(
             CONNECTION, connection.name, prefix + "_window_to", iso(next_to), update_modified=False
         )
-        frappe.db.commit()
+        # Advance and commit the page checkpoint immediately: iter_transactions calls
+        # this between pages so a crash mid-window resumes at the last committed page.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
     for tx in iter_transactions(
         lambda params: client.get("/transactions", params), start, page_to, checkpoint=checkpoint
@@ -183,7 +195,9 @@ def _poll(connection, client, maps, stats, cutoff):
     if start < end:
         end = _window(connection, client, maps, stats, start, end, "poll")
         frappe.db.set_value(CONNECTION, connection.name, "poll_cursor", iso(end), update_modified=False)
-        frappe.db.commit()
+        # Advance the poll cursor only after the window fully committed; a crash
+        # before this commit simply re-polls the window (idempotent), never skips it.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def _recent(connection, client, maps, stats, cutoff):
@@ -196,7 +210,9 @@ def _recent(connection, client, maps, stats, cutoff):
         frappe.db.set_value(
             CONNECTION, connection.name, "last_recent_at", now_datetime(), update_modified=False
         )
-        frappe.db.commit()
+        # Persist last_recent_at only after the window fully committed; a crash
+        # before this commit simply reruns the recent pass, never skips it.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def _backfill(connection, client, maps, stats):
@@ -216,7 +232,9 @@ def _backfill(connection, client, maps, stats):
         },
         update_modified=False,
     )
-    frappe.db.commit()
+    # Persist the advanced backfill cursor only after the window fully committed;
+    # a crash before this commit simply re-runs the backfill segment, never skips it.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def _audit(connection, client, maps, stats, cutoff):
@@ -237,7 +255,9 @@ def _audit(connection, client, maps, stats, cutoff):
             {"audit_cursor": iso(end) if end < cutoff else iso(earliest), "last_audit_at": now_datetime()},
             update_modified=False,
         )
-        frappe.db.commit()
+        # Advance the audit cursor only after the window fully committed; a crash
+        # before this commit simply re-audits the segment, never skips it.
+        frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def run(connection_name):
@@ -266,7 +286,9 @@ def _run_locked(name):
         }
     ).insert(ignore_permissions=True)
     frappe.db.set_value(CONNECTION, name, "last_attempt_at", now_datetime(), update_modified=False)
-    frappe.db.commit()
+    # Persist the Running log and last_attempt_at before any phase runs; if the
+    # worker is killed mid-run, the attempt must already be durably visible.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
     try:
         deadline = time.monotonic() + 600
         client = get_client(connection, deadline=deadline)
@@ -318,7 +340,9 @@ def _run_locked(name):
         dict(stats, status=status, error_code=error, finished_at=now_datetime()),
         update_modified=False,
     )
-    frappe.db.commit()
+    # Final commit while still holding the connection lock: the run's outcome must
+    # be durable before the lock is released and another run can be scheduled.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit
     return dict(stats, status=status, error_code=error)
 
 

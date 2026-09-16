@@ -46,6 +46,86 @@ def workspace_document():
     }
 
 
+def workspace_sidebar_document():
+    """v16 Workspace Sidebar entry point, kept in sync with workspace_sidebar/revolut_bank_feed.json."""
+    return {
+        "doctype": "Workspace Sidebar",
+        "name": "Revolut Bank Feed",
+        "title": "Revolut Bank Feed",
+        "app": "revolut_bank_feed",
+        "module": "Revolut Bank Feed",
+        "standard": 1,
+        "header_icon": "landmark",
+        "items": [
+            {
+                "type": "Link",
+                "label": "Connect Revolut",
+                "link_type": "Page",
+                "link_to": "revolut-setup",
+                "icon": "plug",
+                "child": 0,
+            },
+            {
+                "type": "Link",
+                "label": "Banking app",
+                "link_type": "URL",
+                "url": "/banking",
+                "icon": "landmark",
+                "child": 0,
+            },
+            {
+                "type": "Link",
+                "label": "Bank transactions",
+                "link_type": "DocType",
+                "link_to": "Bank Transaction",
+                "icon": "arrow-left-right",
+                "child": 0,
+            },
+            {
+                "type": "Link",
+                "label": "Account mappings",
+                "link_type": "DocType",
+                "link_to": "Revolut Account Map",
+                "icon": "link",
+                "child": 0,
+            },
+            {
+                "type": "Link",
+                "label": "Sync logs",
+                "link_type": "DocType",
+                "link_to": "Revolut Sync Log",
+                "icon": "list",
+                "child": 0,
+            },
+            {
+                "type": "Link",
+                "label": "Connection settings",
+                "link_type": "DocType",
+                "link_to": "Revolut Connection",
+                "icon": "settings",
+                "child": 0,
+            },
+        ],
+    }
+
+
+def desktop_icon_document():
+    """v16 Desktop Icon entry point, kept in sync with desktop_icon/revolut_bank_feed.json."""
+    return {
+        "doctype": "Desktop Icon",
+        "name": "Revolut Bank Feed",
+        "label": "Revolut Bank Feed",
+        "icon_type": "App",
+        "link_type": "External",
+        "link": "/desk/revolut-setup?sidebar=Revolut%20Bank%20Feed",
+        "app": "revolut_bank_feed",
+        "standard": 1,
+        "hidden": 0,
+        "logo_url": "/assets/revolut_bank_feed/images/revolut-business-icon.svg",
+        "roles": [{"role": "System Manager"}],
+    }
+
+
 def merge_home_icon(layout, icon):
     """Refresh app metadata while retaining the user's layout and hidden state."""
     result = deepcopy(layout)
