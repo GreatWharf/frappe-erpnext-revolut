@@ -1,3 +1,7 @@
+# 0.4.4 — Frappe Cloud Marketplace metadata
+
+- Declare Frappe v16 compatibility in `pyproject.toml` for Frappe Cloud validation.
+
 # 0.4.3 — Account identification and optional mapping
 
 - Show account names, balances, status, available type, full ID and timestamps during mapping.
