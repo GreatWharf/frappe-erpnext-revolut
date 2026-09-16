@@ -1,3 +1,9 @@
+# 0.5.1 — Marketplace version-range correction
+
+- Change the Frappe compatibility ceiling from `<17.0.0-dev` to the stable `<17.0.0` required by Frappe Cloud's range validator. v15 and v16 support is unchanged.
+- Add a regression assertion for the corrected declaration. No banking logic or schema changes.
+- Use tag `v0.5.1`, or refresh the existing `release/0.5.0` branch in Frappe Cloud. The older `v0.5.0` tag remains unchanged and contains the rejected metadata.
+
 # 0.5.0 — Broader compatibility and clearer daily controls
 
 Release candidate dated 2026-09-16. Existing tags are unchanged.

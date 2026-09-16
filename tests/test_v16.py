@@ -67,7 +67,7 @@ def test_package_allows_supported_python_and_frappe_versions():
     project = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
     assert project["project"]["requires-python"] == ">=3.10,<3.15"
     assert project["tool"]["ruff"]["target-version"] == "py310"
-    assert project["tool"]["bench"]["frappe-dependencies"]["frappe"] == ">=15.0.0-dev,<17.0.0-dev"
+    assert project["tool"]["bench"]["frappe-dependencies"]["frappe"] == ">=15.0.0-dev,<17.0.0"
 
 
 def test_application_and_tests_parse_on_python_310():
